@@ -38,3 +38,36 @@ class TestSala(TestCase):
             sala.full_clean()
 
         self.assertIn('capacidad', error.exception.message_dict)
+
+    def test_nombre_es_requerido(self):
+        sala = Sala(
+            nombre='',
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['nombre'],
+            ['Este campo no puede estar en blanco.']
+        )
+
+    def test_nombre_mayor_100_caracteres(self):
+        sala = Sala(
+            nombre='A' * 101,
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['nombre'],
+            ['Asegúrese de que este valor tenga como máximo 100 '
+             'caracteres (tiene 101).']
+        )
