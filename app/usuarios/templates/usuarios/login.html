@@ -2,14 +2,249 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar sesión</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top left, #eef2ff 0%, #e0e7ff 45%, #dbeafe 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #1e293b;
+        }
+        /* Barra superior institucional */
+        .navbar {
+            background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%);
+            color: #ffffff;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.2);
+            border-bottom: 3px solid #f59e0b;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .navbar-icon {
+            width: 42px;
+            height: 42px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1.5px solid #f59e0b;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .navbar-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #ffffff;
+        }
+        .navbar-title span {
+            display: block;
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: 400;
+        }
+        .navbar-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        /* Contenedor principal */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 20px;
+        }
+        .login-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 430px;
+            border-radius: 18px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            overflow: hidden;
+        }
+        .card-top-bar {
+            height: 6px;
+            background: linear-gradient(90deg, #1e3a8a, #2563eb, #f59e0b);
+        }
+        .login-card-header {
+            padding: 28px 34px 12px;
+            text-align: center;
+        }
+        .avatar-circle {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            background: #eff6ff;
+            border: 2px solid #bfdbfe;
+            color: #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .login-card-header h2 {
+            font-size: 23px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+        .login-card-header p {
+            font-size: 13.5px;
+            color: #64748b;
+        }
+        .login-body {
+            padding: 22px 34px 32px;
+        }
+        .errornote {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #ef4444;
+            color: #b91c1c;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 7px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 14px;
+            color: #0f172a;
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .form-group input:hover {
+            border-color: #94a3b8;
+        }
+        .form-group input:focus {
+            background: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+        }
+        .btn-submit {
+            width: 100%;
+            margin-top: 6px;
+            padding: 13px 18px;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+            transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .btn-submit:hover {
+            filter: brightness(1.06);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.36);
+        }
+        .btn-submit:active {
+            transform: translateY(1px);
+        }
+        .login-footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 14px 34px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .page-footer {
+            text-align: center;
+            padding: 14px;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
 </head>
 <body>
-    <h1>Iniciar sesión</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Identificarse</button>
-    </form>
+    <header class="navbar">
+        <div class="navbar-brand">
+            <div class="navbar-icon">📚</div>
+            <div class="navbar-title">
+                <h1>Sistema de Reservación de Salas de Estudio</h1>
+                <span>Gestión y consulta de disponibilidad de salas</span>
+            </div>
+        </div>
+        <div class="navbar-badge">Portal de Reservaciones</div>
+    </header>
+
+    <main class="main-container">
+        <div class="login-card">
+            <div class="card-top-bar"></div>
+            <div class="login-card-header">
+                <div class="avatar-circle">🔐</div>
+                <h2>Iniciar sesión</h2>
+                <p>Ingresa tus credenciales para consultar y reservar salas</p>
+            </div>
+
+            <div class="login-body">
+                {% if form.errors %}
+                    <p class="errornote">
+                        Por favor introduzca un nombre de usuario y contraseña correctos.
+                    </p>
+                {% endif %}
+
+                <form method="post" id="login-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="id_username">Usuario</label>
+                        <input type="text" name="username" id="id_username" placeholder="Ej. alumno01" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_password">Contraseña</label>
+                        <input type="password" name="password" id="id_password" placeholder="Ingresa tu contraseña" required>
+                    </div>
+                    <button type="submit" id="btn-login" class="btn-submit">Identificarse</button>
+                </form>
+            </div>
+
+            <div class="login-footer">
+                Acceso exclusivo para usuarios autenticados
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        Sistema de Reservación de Salas de Estudio &bull; Horario: 08:00 a 20:00 hrs
+    </footer>
 </body>
 </html>
