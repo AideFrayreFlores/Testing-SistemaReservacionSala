@@ -156,3 +156,37 @@ class TestReservacion(TestCase):
         reservacion.full_clean()
         reservacion.save()
         self.assertEqual(Reservacion.objects.count(), 1)
+
+    def test_asistentes_minimo_1_valido(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=1,
+            proposito='Estudio grupal para examen'
+        )
+        reservacion.full_clean()
+        reservacion.save()
+        self.assertEqual(Reservacion.objects.count(), 1)
+
+    def test_estado_invalido_no_permitido(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen',
+            estado='FINALIZADA'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['estado'],
+            ["El valor 'FINALIZADA' no es una opción válida."]
+        )
