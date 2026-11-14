@@ -190,3 +190,41 @@ class TestReservacion(TestCase):
             error.exception.message_dict['estado'],
             ["El valor 'FINALIZADA' no es una opción válida."]
         )
+
+    def test_fecha_es_requerida(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=None,
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['fecha'],
+            ['Este campo no puede ser nulo.']
+        )
+
+    def test_hora_inicio_es_requerida(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=None,
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['hora_inicio'],
+            ['Este campo no puede ser nulo.']
+        )
