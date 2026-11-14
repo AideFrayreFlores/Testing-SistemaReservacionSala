@@ -6,12 +6,12 @@ class TestSala(TestCase):
 
     def test_guarda_sala(self):
         Sala.objects.create(
-            nombre='Sala A',
+            nombre='Sala D',
             capacidad=4,
             ubicacion='Biblioteca, planta baja',
             activa=True
         )
-        self.assertEqual(Sala.objects.count(), 1)
+        self.assertEqual(Sala.objects.count(), 5)
 
     def test_existen_cuatro_salas_iniciales(self):
         self.assertEqual(Sala.objects.count(), 4)
