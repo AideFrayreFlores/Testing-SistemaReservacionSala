@@ -12,3 +12,6 @@ class TestSala(TestCase):
             activa=True
         )
         self.assertEqual(Sala.objects.count(), 1)
+
+    def test_existen_cuatro_salas_iniciales(self):
+        self.assertEqual(Sala.objects.count(), 4)

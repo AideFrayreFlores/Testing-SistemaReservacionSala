@@ -1,3 +1,8 @@
 from django.db import models
 
-# Create your models here.
+
+class Sala(models.Model):
+    nombre = models.CharField(max_length=100)
+    capacidad = models.PositiveIntegerField()
+    ubicacion = models.CharField(max_length=200)
+    activa = models.BooleanField(default=True)
