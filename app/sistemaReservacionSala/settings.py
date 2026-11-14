@@ -132,3 +132,4 @@ MAILERS = {
 
 LOGIN_URL = '/usuarios/login'
 LOGIN_REDIRECT_URL = '/reservaciones/'
+LOGOUT_REDIRECT_URL = '/usuarios/login'
