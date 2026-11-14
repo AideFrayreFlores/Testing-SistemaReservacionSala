@@ -99,3 +99,33 @@ class TestFormReservacion(TestCase):
             form.errors['hora_fin'],
             ['La hora de fin debe ser posterior a la hora de inicio.']
         )
+
+    def test_hora_inicio_antes_de_08_invalida(self):
+        self.data['hora_inicio'] = time(7, 59)
+        self.data['hora_fin'] = time(9, 0)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['hora_inicio'],
+            ['La hora de inicio debe encontrarse entre 08:00 y 19:00.']
+        )
+
+    def test_hora_inicio_despues_de_19_invalida(self):
+        self.data['hora_inicio'] = time(19, 1)
+        self.data['hora_fin'] = time(20, 0)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['hora_inicio'],
+            ['La hora de inicio debe encontrarse entre 08:00 y 19:00.']
+        )
+
+    def test_hora_fin_despues_de_20_invalida(self):
+        self.data['hora_inicio'] = time(19, 0)
+        self.data['hora_fin'] = time(20, 1)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['hora_fin'],
+            ['La hora de fin no puede exceder las 20:00.']
+        )
