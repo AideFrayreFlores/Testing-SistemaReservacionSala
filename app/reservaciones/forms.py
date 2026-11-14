@@ -1,3 +1,4 @@
+from datetime import date
 from django import forms
 from reservaciones.models import Reservacion
 
@@ -41,3 +42,11 @@ class ReservacionForm(forms.ModelForm):
                 'El número de asistentes supera la capacidad de la sala.'
             )
         return cleaned_data
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data.get('fecha')
+        if fecha and fecha < date.today():
+            raise forms.ValidationError(
+                'La fecha no puede ser anterior al día actual.'
+            )
+        return fecha
