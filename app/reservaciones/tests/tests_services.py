@@ -91,8 +91,19 @@ class TestServicioReservacion(TestCase):
             ['La sala no está disponible en el horario solicitado.']
         )
 
+    def test_horarios_adyacentes_permitidos(self):
+        res1 = registrar_reservacion(**self.datos)
+        self.datos['hora_inicio'] = time(11, 0)
+        self.datos['hora_fin'] = time(12, 0)
+        res2 = registrar_reservacion(**self.datos)
+        self.assertEqual(res1.estado, 'VIGENTE')
+        self.assertEqual(res2.estado, 'VIGENTE')
 
-
-
+    def test_ignorar_reservaciones_canceladas_al_calcular_disponibilidad(self):
+        res_cancelada = registrar_reservacion(**self.datos)
+        res_cancelada.estado = 'CANCELADA'
+        res_cancelada.save()
+        nueva_res = registrar_reservacion(**self.datos)
+        self.assertEqual(nueva_res.estado, 'VIGENTE')
 
 
