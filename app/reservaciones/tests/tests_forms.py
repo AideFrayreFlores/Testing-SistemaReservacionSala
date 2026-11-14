@@ -180,4 +180,42 @@ class TestFormReservacion(TestCase):
             ['El propósito debe tener entre 10 y 200 caracteres.']
         )
 
+    def test_proposito_vacio_o_solo_espacios_invalido(self):
+        self.data['proposito'] = '          '
+        form_espacios = ReservacionForm(data=self.data)
+        self.assertFalse(form_espacios.is_valid())
+        self.assertEqual(
+            form_espacios.errors['proposito'],
+            ['Este campo es obligatorio.']
+        )
+
+    def test_campos_obligatorios_vacios_invalidos(self):
+        form = ReservacionForm(data={})
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['sala'],
+            ['Este campo es obligatorio.']
+        )
+        self.assertEqual(
+            form.errors['fecha'],
+            ['Este campo es obligatorio.']
+        )
+        self.assertEqual(
+            form.errors['hora_inicio'],
+            ['Este campo es obligatorio.']
+        )
+        self.assertEqual(
+            form.errors['hora_fin'],
+            ['Este campo es obligatorio.']
+        )
+        self.assertEqual(
+            form.errors['asistentes'],
+            ['Este campo es obligatorio.']
+        )
+        self.assertEqual(
+            form.errors['proposito'],
+            ['Este campo es obligatorio.']
+        )
+
+
 
