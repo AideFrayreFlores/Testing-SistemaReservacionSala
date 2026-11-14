@@ -71,6 +71,27 @@ class TestServicioReservacion(TestCase):
             ['La sala no está disponible en el horario solicitado.']
         )
 
+    def test_traslape_contenido_invalido(self):
+        registrar_reservacion(**self.datos)
+        self.datos['hora_inicio'] = time(10, 15)
+        self.datos['hora_fin'] = time(10, 45)
+        with self.assertRaises(ValidationError) as error:
+            registrar_reservacion(**self.datos)
+        self.assertEqual(
+            error.exception.messages,
+            ['La sala no está disponible en el horario solicitado.']
+        )
+
+    def test_traslape_total_invalido(self):
+        registrar_reservacion(**self.datos)
+        with self.assertRaises(ValidationError) as error:
+            registrar_reservacion(**self.datos)
+        self.assertEqual(
+            error.exception.messages,
+            ['La sala no está disponible en el horario solicitado.']
+        )
+
+
 
 
 
