@@ -35,3 +35,12 @@ class TestViewsReservacion(TestCase):
             '/usuarios/login?next=/reservaciones/nueva'
         )
 
+    def test_template_correcto_nueva_reservacion(self):
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.get('/reservaciones/nueva')
+        self.assertTemplateUsed(
+            response,
+            'reservaciones/nueva_reservacion.html'
+        )
+
+
