@@ -79,3 +79,23 @@ class TestFormReservacion(TestCase):
             form.errors['fecha'],
             ['La fecha no puede ser anterior al día actual.']
         )
+
+    def test_hora_fin_igual_a_hora_inicio_invalida(self):
+        self.data['hora_inicio'] = time(10, 0)
+        self.data['hora_fin'] = time(10, 0)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['hora_fin'],
+            ['La hora de fin debe ser posterior a la hora de inicio.']
+        )
+
+    def test_hora_fin_menor_a_hora_inicio_invalida(self):
+        self.data['hora_inicio'] = time(11, 0)
+        self.data['hora_fin'] = time(10, 0)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['hora_fin'],
+            ['La hora de fin debe ser posterior a la hora de inicio.']
+        )
