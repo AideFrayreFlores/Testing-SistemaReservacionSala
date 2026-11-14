@@ -49,4 +49,17 @@ class TestServicioReservacion(TestCase):
             ['La duración de la reservación debe ser de entre 30 minutos y 2 horas.']
         )
 
+    def test_duracion_bordes_30_min_y_2_horas_valida(self):
+        self.datos['hora_inicio'] = time(10, 0)
+        self.datos['hora_fin'] = time(10, 30)
+        res_min = registrar_reservacion(**self.datos)
+        self.assertEqual(res_min.estado, 'VIGENTE')
+
+        self.datos['hora_inicio'] = time(12, 0)
+        self.datos['hora_fin'] = time(14, 0)
+        res_max = registrar_reservacion(**self.datos)
+        self.assertEqual(res_max.estado, 'VIGENTE')
+
+
+
 
