@@ -39,3 +39,14 @@ class TestServicioReservacion(TestCase):
             ['La duración de la reservación debe ser de entre 30 minutos y 2 horas.']
         )
 
+    def test_duracion_mayor_a_2_horas_invalida(self):
+        self.datos['hora_inicio'] = time(10, 0)
+        self.datos['hora_fin'] = time(12, 1)
+        with self.assertRaises(ValidationError) as error:
+            registrar_reservacion(**self.datos)
+        self.assertEqual(
+            error.exception.messages,
+            ['La duración de la reservación debe ser de entre 30 minutos y 2 horas.']
+        )
+
+
