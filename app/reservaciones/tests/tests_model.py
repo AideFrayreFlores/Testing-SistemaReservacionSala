@@ -34,3 +34,18 @@ class TestReservacion(TestCase):
         self.assertEqual(reservacion.estado, 'VIGENTE')
         self.assertIsNotNone(reservacion.fecha_creacion)
         self.assertIsNone(reservacion.fecha_cancelacion)
+
+    def test_return_object_reservacion(self):
+        reservacion = Reservacion.objects.create(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date(2026, 11, 20),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+        self.assertEqual(
+            str(reservacion),
+            'usuario1 - Sala D - 2026-11-20 - 10:00:00 a 11:00:00 - 3'
+        )
