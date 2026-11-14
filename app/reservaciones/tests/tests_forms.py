@@ -61,3 +61,12 @@ class TestFormReservacion(TestCase):
             form.errors['asistentes'],
             ['Introduzca un número entero.']
         )
+
+    def test_asistentes_supera_capacidad_sala_invalido(self):
+        self.data['asistentes'] = 5
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['asistentes'],
+            ['El número de asistentes supera la capacidad de la sala.']
+        )
