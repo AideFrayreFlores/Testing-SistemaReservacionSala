@@ -15,3 +15,12 @@ class TestSala(TestCase):
 
     def test_existen_cuatro_salas_iniciales(self):
         self.assertEqual(Sala.objects.count(), 4)
+
+    def test_return_object_sala(self):
+        sala = Sala.objects.create(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+        self.assertEqual(str(sala), 'Sala D')
