@@ -75,3 +75,11 @@ class ReservacionForm(forms.ModelForm):
                 'La hora de fin no puede exceder las 20:00.'
             )
         return hora_fin
+
+    def clean_sala(self):
+        sala = self.cleaned_data.get('sala')
+        if sala and not sala.activa:
+            raise forms.ValidationError(
+                'La sala no se encuentra disponible para reservación.'
+            )
+        return sala
