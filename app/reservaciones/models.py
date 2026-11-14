@@ -1,4 +1,4 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MinLengthValidator
 from django.db import models
 from django.contrib.auth.models import User
 from salas.models import Sala
@@ -16,7 +16,10 @@ class Reservacion(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
     asistentes = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    proposito = models.CharField(max_length=200)
+    proposito = models.CharField(
+        max_length=200,
+        validators=[MinLengthValidator(10)]
+    )
     estado = models.CharField(
         max_length=15,
         choices=ESTADOS,
