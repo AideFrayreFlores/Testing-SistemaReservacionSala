@@ -21,6 +21,19 @@ def registrar_reservacion(
             'La duración de la reservación debe ser de entre 30 minutos y 2 horas.'
         )
 
+    traslape = Reservacion.objects.filter(
+        sala=sala,
+        fecha=fecha,
+        estado='VIGENTE',
+        hora_inicio__lt=hora_fin,
+        hora_fin__gt=hora_inicio
+    ).exists()
+
+    if traslape:
+        raise ValidationError(
+            'La sala no está disponible en el horario solicitado.'
+        )
+
     return Reservacion.objects.create(
         usuario=usuario,
         sala=sala,
