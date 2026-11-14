@@ -60,6 +60,18 @@ class TestServicioReservacion(TestCase):
         res_max = registrar_reservacion(**self.datos)
         self.assertEqual(res_max.estado, 'VIGENTE')
 
+    def test_traslape_parcial_invalido(self):
+        registrar_reservacion(**self.datos)
+        self.datos['hora_inicio'] = time(10, 30)
+        self.datos['hora_fin'] = time(11, 30)
+        with self.assertRaises(ValidationError) as error:
+            registrar_reservacion(**self.datos)
+        self.assertEqual(
+            error.exception.messages,
+            ['La sala no está disponible en el horario solicitado.']
+        )
+
+
 
 
 
