@@ -37,7 +37,10 @@ class TestSala(TestCase):
         with self.assertRaises(ValidationError) as error:
             sala.full_clean()
 
-        self.assertIn('capacidad', error.exception.message_dict)
+        self.assertEqual(
+            error.exception.message_dict['capacidad'],
+            ['Asegúrese de que este valor sea mayor o igual a 1.']
+        )
 
     def test_nombre_es_requerido(self):
         sala = Sala(
@@ -71,3 +74,27 @@ class TestSala(TestCase):
             ['Asegúrese de que este valor tenga como máximo 100 '
              'caracteres (tiene 101).']
         )
+
+    def test_ubicacion_es_requerida(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='',
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['ubicacion'],
+            ['Este campo no puede estar en blanco.']
+        )
+
+    def test_activa_por_defecto_es_true(self):
+        sala = Sala.objects.create(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja'
+        )
+        self.assertTrue(sala.activa)
