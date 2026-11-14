@@ -30,3 +30,11 @@ class TestViews(TestCase):
             'Por favor introduzca un nombre de usuario y contraseña correctos.'
         )
         self.assertIn(mensaje, response.rendered_content)
+
+    def test_login_credenciales_validas_redirige(self):
+        response = self.client.post(
+            '/usuarios/login',
+            data={'username': 'usuario1', 'password': 'Password123!'}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/reservaciones/')
