@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from django import forms
 from reservaciones.models import Reservacion
 
@@ -57,3 +57,21 @@ class ReservacionForm(forms.ModelForm):
                 'La fecha no puede ser anterior al día actual.'
             )
         return fecha
+
+    def clean_hora_inicio(self):
+        hora_inicio = self.cleaned_data.get('hora_inicio')
+        if hora_inicio and (
+            hora_inicio < time(8, 0) or hora_inicio > time(19, 0)
+        ):
+            raise forms.ValidationError(
+                'La hora de inicio debe encontrarse entre 08:00 y 19:00.'
+            )
+        return hora_inicio
+
+    def clean_hora_fin(self):
+        hora_fin = self.cleaned_data.get('hora_fin')
+        if hora_fin and hora_fin > time(20, 0):
+            raise forms.ValidationError(
+                'La hora de fin no puede exceder las 20:00.'
+            )
+        return hora_fin
