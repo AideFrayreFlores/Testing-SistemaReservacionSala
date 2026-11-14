@@ -15,3 +15,18 @@ class TestViews(TestCase):
     def test_template_correcto_login(self):
         response = self.client.get('/usuarios/login')
         self.assertTemplateUsed(response, 'usuarios/login.html')
+
+    def test_titulo_se_encuentra_en_el_template(self):
+        response = self.client.get('/usuarios/login')
+        titulo = '<title>Iniciar sesión</title>'
+        self.assertInHTML(titulo, response.rendered_content)
+
+    def test_login_credenciales_invalidas_muestra_error(self):
+        response = self.client.post(
+            '/usuarios/login',
+            data={'username': 'invalido', 'password': 'incorrecta'}
+        )
+        mensaje = (
+            'Por favor introduzca un nombre de usuario y contraseña correctos.'
+        )
+        self.assertIn(mensaje, response.rendered_content)
