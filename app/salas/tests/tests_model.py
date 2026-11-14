@@ -98,3 +98,36 @@ class TestSala(TestCase):
             ubicacion='Biblioteca, planta baja'
         )
         self.assertTrue(sala.activa)
+
+    def test_nombre_maximo_100_caracteres_valido(self):
+        sala = Sala(
+            nombre='A' * 100,
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+        sala.full_clean()
+        sala.save()
+        self.assertEqual(Sala.objects.count(), 5)
+
+    def test_capacidad_minimo_1_valido(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=1,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+        sala.full_clean()
+        sala.save()
+        self.assertEqual(Sala.objects.count(), 5)
+
+    def test_ubicacion_maximo_200_caracteres_valido(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='A' * 200,
+            activa=True
+        )
+        sala.full_clean()
+        sala.save()
+        self.assertEqual(Sala.objects.count(), 5)
