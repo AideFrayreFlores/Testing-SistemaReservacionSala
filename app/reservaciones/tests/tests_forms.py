@@ -144,3 +144,21 @@ class TestFormReservacion(TestCase):
             form.errors['sala'],
             ['La sala no se encuentra disponible para reservación.']
         )
+
+    def test_horario_bordes_exactos_08_y_19_a_20_valido(self):
+        self.data['hora_inicio'] = time(8, 0)
+        self.data['hora_fin'] = time(9, 0)
+        form = ReservacionForm(data=self.data)
+        self.assertTrue(form.is_valid())
+
+        self.data['hora_inicio'] = time(19, 0)
+        self.data['hora_fin'] = time(20, 0)
+        form_tarde = ReservacionForm(data=self.data)
+        self.assertTrue(form_tarde.is_valid())
+
+    def test_asistentes_igual_a_capacidad_y_fecha_futura_validos(self):
+        self.data['asistentes'] = 4
+        self.data['fecha'] = date.today() + timedelta(days=1)
+        form = ReservacionForm(data=self.data)
+        self.assertTrue(form.is_valid())
+
