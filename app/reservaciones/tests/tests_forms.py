@@ -34,3 +34,30 @@ class TestFormReservacion(TestCase):
             form.errors['proposito'],
             ['El propósito debe tener entre 10 y 200 caracteres.']
         )
+
+    def test_asistentes_cero_invalido(self):
+        self.data['asistentes'] = 0
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['asistentes'],
+            ['Asegúrese de que este valor sea mayor o igual a 1.']
+        )
+
+    def test_asistentes_negativo_invalido(self):
+        self.data['asistentes'] = -2
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            'Asegúrese de que este valor sea mayor o igual a 1.',
+            form.errors['asistentes']
+        )
+
+    def test_asistentes_texto_invalido(self):
+        self.data['asistentes'] = 'cinco'
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['asistentes'],
+            ['Introduzca un número entero.']
+        )
