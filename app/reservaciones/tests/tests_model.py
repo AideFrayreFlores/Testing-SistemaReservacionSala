@@ -128,3 +128,31 @@ class TestReservacion(TestCase):
             ['Asegúrese de que este valor tenga como mínimo 10 '
              'caracteres (tiene 9).']
         )
+
+    def test_proposito_minimo_10_caracteres_valido(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='A' * 10
+        )
+        reservacion.full_clean()
+        reservacion.save()
+        self.assertEqual(Reservacion.objects.count(), 1)
+
+    def test_proposito_maximo_200_caracteres_valido(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='A' * 200
+        )
+        reservacion.full_clean()
+        reservacion.save()
+        self.assertEqual(Reservacion.objects.count(), 1)
