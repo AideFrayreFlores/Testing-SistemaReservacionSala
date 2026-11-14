@@ -162,3 +162,22 @@ class TestFormReservacion(TestCase):
         form = ReservacionForm(data=self.data)
         self.assertTrue(form.is_valid())
 
+    def test_proposito_bordes_10_y_200_caracteres_valido(self):
+        self.data['proposito'] = 'A' * 10
+        form_min = ReservacionForm(data=self.data)
+        self.assertTrue(form_min.is_valid())
+
+        self.data['proposito'] = 'A' * 200
+        form_max = ReservacionForm(data=self.data)
+        self.assertTrue(form_max.is_valid())
+
+    def test_proposito_mayor_200_caracteres_invalido(self):
+        self.data['proposito'] = 'A' * 201
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['proposito'],
+            ['El propósito debe tener entre 10 y 200 caracteres.']
+        )
+
+
