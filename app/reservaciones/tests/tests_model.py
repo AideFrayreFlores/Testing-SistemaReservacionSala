@@ -69,3 +69,42 @@ class TestReservacion(TestCase):
             error.exception.message_dict['asistentes'],
             ['Asegúrese de que este valor sea mayor o igual a 1.']
         )
+
+    def test_proposito_es_requerido(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito=''
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['proposito'],
+            ['Este campo no puede estar en blanco.']
+        )
+
+    def test_proposito_mayor_200_caracteres(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='A' * 201
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['proposito'],
+            ['Asegúrese de que este valor tenga como máximo 200 '
+             'caracteres (tiene 201).']
+        )
