@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, time, timedelta
 from django.test import TestCase
 from salas.models import Sala
 from reservaciones.forms import ReservacionForm
@@ -69,4 +69,13 @@ class TestFormReservacion(TestCase):
         self.assertEqual(
             form.errors['asistentes'],
             ['El número de asistentes supera la capacidad de la sala.']
+        )
+
+    def test_fecha_pasada_invalida(self):
+        self.data['fecha'] = date.today() - timedelta(days=1)
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['fecha'],
+            ['La fecha no puede ser anterior al día actual.']
         )
