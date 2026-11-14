@@ -1,5 +1,6 @@
 from datetime import date, time
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from salas.models import Sala
 from reservaciones.models import Reservacion
@@ -48,4 +49,23 @@ class TestReservacion(TestCase):
         self.assertEqual(
             str(reservacion),
             'usuario1 - Sala D - 2026-11-20 - 10:00:00 a 11:00:00 - 3'
+        )
+
+    def test_asistentes_no_acepta_cero(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=0,
+            proposito='Estudio grupal para examen'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['asistentes'],
+            ['Asegúrese de que este valor sea mayor o igual a 1.']
         )
