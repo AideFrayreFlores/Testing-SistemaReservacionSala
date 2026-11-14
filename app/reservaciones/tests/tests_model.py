@@ -108,3 +108,23 @@ class TestReservacion(TestCase):
             ['Asegúrese de que este valor tenga como máximo 200 '
              'caracteres (tiene 201).']
         )
+
+    def test_proposito_menor_10_caracteres(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='A' * 9
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['proposito'],
+            ['Asegúrese de que este valor tenga como mínimo 10 '
+             'caracteres (tiene 9).']
+        )
