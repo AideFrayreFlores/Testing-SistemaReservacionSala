@@ -46,3 +46,9 @@ class TestViews(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/reservaciones/')
+
+    def test_logout_redirige_a_login(self):
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.post('/usuarios/logout')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/login')
