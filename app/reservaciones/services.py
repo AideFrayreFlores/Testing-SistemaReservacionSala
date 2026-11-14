@@ -3,15 +3,15 @@ from django.core.exceptions import ValidationError
 from reservaciones.models import Reservacion
 
 
-def registrar_reservacion(
-    usuario,
-    sala,
-    fecha,
-    hora_inicio,
-    hora_fin,
-    asistentes,
-    proposito
-):
+def registrar_reservacion(datos):
+    usuario = datos['usuario']
+    sala = datos['sala']
+    fecha = datos['fecha']
+    hora_inicio = datos['hora_inicio']
+    hora_fin = datos['hora_fin']
+    asistentes = datos['asistentes']
+    proposito = datos['proposito']
+
     inicio_dt = datetime.combine(fecha, hora_inicio)
     fin_dt = datetime.combine(fecha, hora_fin)
     duracion_minutos = (fin_dt - inicio_dt).total_seconds() / 60
