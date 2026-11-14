@@ -131,3 +131,52 @@ class TestSala(TestCase):
         sala.full_clean()
         sala.save()
         self.assertEqual(Sala.objects.count(), 5)
+
+    def test_ubicacion_mayor_200_caracteres(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='A' * 201,
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['ubicacion'],
+            ['Asegúrese de que este valor tenga como máximo 200 '
+             'caracteres (tiene 201).']
+        )
+
+    def test_capacidad_es_requerida(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=None,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['capacidad'],
+            ['Este campo no puede ser nulo.']
+        )
+
+    def test_capacidad_negativa_no_permitida(self):
+        sala = Sala(
+            nombre='Sala D',
+            capacidad=-1,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+
+        self.assertIn(
+            'Asegúrese de que este valor sea mayor o igual a 1.',
+            error.exception.message_dict['capacidad']
+        )
