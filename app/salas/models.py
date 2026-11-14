@@ -6,3 +6,6 @@ class Sala(models.Model):
     capacidad = models.PositiveIntegerField()
     ubicacion = models.CharField(max_length=200)
     activa = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
