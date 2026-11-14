@@ -1,3 +1,25 @@
 from django.db import models
+from django.contrib.auth.models import User
+from salas.models import Sala
 
-# Create your models here.
+
+class Reservacion(models.Model):
+    ESTADOS = [
+        ('VIGENTE', 'Vigente'),
+        ('CANCELADA', 'Cancelada'),
+    ]
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    sala = models.ForeignKey(Sala, on_delete=models.CASCADE)
+    fecha = models.DateField()
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    asistentes = models.PositiveIntegerField()
+    proposito = models.CharField(max_length=200)
+    estado = models.CharField(
+        max_length=15,
+        choices=ESTADOS,
+        default='VIGENTE'
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_cancelacion = models.DateTimeField(null=True, blank=True)
