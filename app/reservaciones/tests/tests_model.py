@@ -266,3 +266,41 @@ class TestReservacion(TestCase):
             error.exception.message_dict['asistentes'],
             ['Este campo no puede ser nulo.']
         )
+
+    def test_sala_es_requerida(self):
+        reservacion = Reservacion(
+            usuario=self.usuario,
+            sala=None,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['sala'],
+            ['Este campo no puede ser nulo.']
+        )
+
+    def test_usuario_es_requerido(self):
+        reservacion = Reservacion(
+            usuario=None,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+
+        with self.assertRaises(ValidationError) as error:
+            reservacion.full_clean()
+
+        self.assertEqual(
+            error.exception.message_dict['usuario'],
+            ['Este campo no puede ser nulo.']
+        )
