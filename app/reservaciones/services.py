@@ -16,7 +16,7 @@ def registrar_reservacion(
     fin_dt = datetime.combine(fecha, hora_fin)
     duracion_minutos = (fin_dt - inicio_dt).total_seconds() / 60
 
-    if duracion_minutos < 30:
+    if duracion_minutos < 30 or duracion_minutos > 120:
         raise ValidationError(
             'La duración de la reservación debe ser de entre 30 minutos y 2 horas.'
         )
