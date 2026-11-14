@@ -1,8 +1,16 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.contrib.auth.models import User
 
 
 class TestViews(TestCase):
+
+    def setUp(self):
+        self.usuario = User.objects.create_user(
+            username='usuario1',
+            email='usuario1@correo.com',
+            password='Password123!'
+        )
 
     def test_login_response(self):
         response = self.client.get('/usuarios/login')
