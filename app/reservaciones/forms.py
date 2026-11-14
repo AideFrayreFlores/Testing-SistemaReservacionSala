@@ -3,6 +3,7 @@ from reservaciones.models import Reservacion
 
 
 class ReservacionForm(forms.ModelForm):
+    asistentes = forms.IntegerField(min_value=1)
     proposito = forms.CharField(
         max_length=200,
         error_messages={
@@ -29,3 +30,14 @@ class ReservacionForm(forms.ModelForm):
                 'El propósito debe tener entre 10 y 200 caracteres.'
             )
         return proposito
+
+    def clean(self):
+        cleaned_data = super().clean()
+        sala = cleaned_data.get('sala')
+        asistentes = cleaned_data.get('asistentes')
+        if sala and asistentes is not None and asistentes > sala.capacidad:
+            self.add_error(
+                'asistentes',
+                'El número de asistentes supera la capacidad de la sala.'
+            )
+        return cleaned_data

@@ -48,9 +48,9 @@ class TestFormReservacion(TestCase):
         self.data['asistentes'] = -2
         form = ReservacionForm(data=self.data)
         self.assertFalse(form.is_valid())
-        self.assertIn(
-            'Asegúrese de que este valor sea mayor o igual a 1.',
-            form.errors['asistentes']
+        self.assertEqual(
+            form.errors['asistentes'],
+            ['Asegúrese de que este valor sea mayor o igual a 1.']
         )
 
     def test_asistentes_texto_invalido(self):
