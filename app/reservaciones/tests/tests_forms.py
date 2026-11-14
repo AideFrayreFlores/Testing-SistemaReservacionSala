@@ -129,3 +129,18 @@ class TestFormReservacion(TestCase):
             form.errors['hora_fin'],
             ['La hora de fin no puede exceder las 20:00.']
         )
+
+    def test_sala_inactiva_invalida(self):
+        sala_inactiva = Sala.objects.create(
+            nombre='Sala Inactiva',
+            capacidad=6,
+            ubicacion='Biblioteca, planta alta',
+            activa=False
+        )
+        self.data['sala'] = sala_inactiva.id
+        form = ReservacionForm(data=self.data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(
+            form.errors['sala'],
+            ['La sala no se encuentra disponible para reservación.']
+        )
