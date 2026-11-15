@@ -86,6 +86,35 @@ class TestViewsReservacion(TestCase):
             'La sala no está disponible en el horario solicitado.'
         )
 
+    def test_crear_reservacion_post_invalido_conserva_datos_y_no_guarda(self):
+        self.client.login(username='usuario1', password='Password123!')
+        self.datos['asistentes'] = 10
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Reservacion.objects.count(), 0)
+        self.assertContains(
+            response,
+            'El número de asistentes supera la capacidad de la sala.'
+        )
+        self.assertContains(response, 'Estudio grupal para examen')
+
+    def test_listar_reservaciones_anonimo_y_autenticado(self):
+        response_anon = self.client.get('/reservaciones/')
+        self.assertEqual(response_anon.status_code, 302)
+        self.assertEqual(
+            response_anon.url,
+            '/usuarios/login?next=/reservaciones/'
+        )
+
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.get('/reservaciones/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            'reservaciones/lista_reservaciones.html'
+        )
+
+
 
 
 
