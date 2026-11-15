@@ -120,6 +120,18 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error "La duración de la reservación debe ser de entre 30 minutos y 2 horas."
 
+    Escenario: Rechazo por hora de inicio fuera de horario institucional
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala C"
+        Y capturo la fecha "2027-05-25", hora de inicio "07:30" y hora de fin "08:30"
+        Y capturo el número de asistentes "2" y el propósito "Práctica matutina de laboratorio"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error en el formulario "La hora de inicio debe encontrarse entre 08:00 y 19:00."
+
+
 
 
 
