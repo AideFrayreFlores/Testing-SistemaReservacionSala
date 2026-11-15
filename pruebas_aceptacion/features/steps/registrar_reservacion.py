@@ -1,3 +1,4 @@
+import os
 import threading
 from time import sleep
 from behave import given, when, then
@@ -6,8 +7,23 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 
+def _crear_driver():
+    opciones = webdriver.ChromeOptions()
+    prefs = {
+        'credentials_enable_service': False,
+        'profile.password_manager_enabled': False,
+        'profile.password_manager_leak_detection': False,
+    }
+    opciones.add_experimental_option('prefs', prefs)
+    if os.getenv('HEADLESS', '0') == '1':
+        opciones.add_argument('--headless=new')
+    driver = webdriver.Chrome(options=opciones)
+    driver.implicitly_wait(5)
+    return driver
+
+
 def _iniciar_sesion(username, password):
-    driver = webdriver.Chrome()
+    driver = _crear_driver()
     driver.get('http://localhost:8000/usuarios/login')
     sleep(1)
     driver.find_element(By.NAME, 'username').send_keys(username)
@@ -41,7 +57,7 @@ def _cerrar_drivers(drivers):
 
 @given(u'que ingreso al sistema de reservaciones')
 def step_impl(context):
-    context.driver = webdriver.Chrome()
+    context.driver = _crear_driver()
     context.driver.get('http://localhost:8000/usuarios/login')
     sleep(1)
 
