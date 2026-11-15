@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from salas.models import Sala
+from reservaciones.models import Reservacion
 from reservaciones.services import registrar_reservacion
 
 
@@ -11,7 +12,7 @@ class TestServicioReservacion(TestCase):
     def setUp(self):
         self.usuario = User.objects.create_user(
             username='usuario1',
-            password='Password123!'
+            password='usuario123_'
         )
         self.sala = Sala.objects.create(
             nombre='Sala D',
@@ -55,12 +56,13 @@ class TestServicioReservacion(TestCase):
             ]
         )
 
-    def test_duracion_bordes_30_min_y_2_horas_valida(self):
+    def test_duracion_borde_30_minutos_valida(self):
         self.datos['hora_inicio'] = time(10, 0)
         self.datos['hora_fin'] = time(10, 30)
         res_min = registrar_reservacion(self.datos)
         self.assertEqual(res_min.estado, 'VIGENTE')
 
+    def test_duracion_borde_2_horas_valida(self):
         self.datos['hora_inicio'] = time(12, 0)
         self.datos['hora_fin'] = time(14, 0)
         res_max = registrar_reservacion(self.datos)
@@ -98,12 +100,14 @@ class TestServicioReservacion(TestCase):
         )
 
     def test_horarios_adyacentes_permitidos(self):
-        res1 = registrar_reservacion(self.datos)
+        registrar_reservacion(self.datos)
         self.datos['hora_inicio'] = time(11, 0)
         self.datos['hora_fin'] = time(12, 0)
-        res2 = registrar_reservacion(self.datos)
-        self.assertEqual(res1.estado, 'VIGENTE')
-        self.assertEqual(res2.estado, 'VIGENTE')
+        registrar_reservacion(self.datos)
+        self.assertEqual(
+            Reservacion.objects.filter(estado='VIGENTE').count(),
+            2
+        )
 
     def test_ignorar_reservaciones_canceladas_al_calcular_disponibilidad(self):
         res_cancelada = registrar_reservacion(self.datos)
