@@ -109,5 +109,17 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error "La duración de la reservación debe ser de entre 30 minutos y 2 horas."
 
+    Escenario: Rechazo por duración mayor a 2 horas
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala B"
+        Y capturo la fecha "2027-05-24", hora de inicio "10:00" y hora de fin "13:00"
+        Y capturo el número de asistentes "2" y el propósito "Maratón de estudio grupal"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error "La duración de la reservación debe ser de entre 30 minutos y 2 horas."
+
+
 
 
