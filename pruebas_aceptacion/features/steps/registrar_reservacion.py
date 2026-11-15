@@ -1,71 +1,93 @@
+from time import sleep
 from behave import given, when, then
-from behave.api.pending_step import StepNotImplementedError
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
 
 @given(u'que ingreso al sistema de reservaciones')
 def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given que ingreso al sistema de reservaciones'
-    )
+    context.driver = webdriver.Chrome()
+    context.driver.get('http://localhost:8000/usuarios/login')
+    sleep(1)
 
 
-@given(u'escribo el usuario "alumno1" y la contraseña "alumno123"')
-def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given escribo el usuario "alumno1" y la contraseña "alumno123"'
-    )
+@given(u'escribo el usuario "{username}" y la contraseña "{password}"')
+def step_impl(context, username, password):
+    context.driver.find_element(By.NAME, 'username').send_keys(username)
+    context.driver.find_element(By.NAME, 'password').send_keys(password)
+    sleep(5)
 
 
 @given(u'presiono el botón Ingresar')
 def step_impl(context):
-    raise StepNotImplementedError(u'Given presiono el botón Ingresar')
+    context.driver.find_element(By.ID, 'btn-login').click()
+    sleep(1)
 
 
 @given(u'doy click en el botón Nueva reservación')
 def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given doy click en el botón Nueva reservación'
-    )
+    context.driver.find_element(By.ID, 'btn-nueva-reservacion').click()
+    sleep(1)
 
 
-@given(u'selecciono la sala "Sala A"')
-def step_impl(context):
-    raise StepNotImplementedError(u'Given selecciono la sala "Sala A"')
-
-
-@given(
-    u'capturo la fecha "2027-05-20", hora de inicio "10:00" '
-    u'y hora de fin "11:00"'
-)
-def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given capturo la fecha "2027-05-20", hora de inicio "10:00" '
-        u'y hora de fin "11:00"'
-    )
+@given(u'selecciono la sala "{nombre_sala}"')
+def step_impl(context, nombre_sala):
+    selecion_sala = Select(context.driver.find_element(By.ID, 'id_sala'))
+    selecion_sala.select_by_visible_text(nombre_sala)
+    sleep(1)
 
 
 @given(
-    u'capturo el número de asistentes "3" '
-    u'y el propósito "Estudio grupal para examen"'
+    u'capturo la fecha "{fecha}", hora de inicio "{inicio}" '
+    u'y hora de fin "{fin}"'
 )
-def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given capturo el número de asistentes "3" '
-        u'y el propósito "Estudio grupal para examen"'
+def step_impl(context, fecha, inicio, fin):
+    campo_fecha = context.driver.find_element(By.ID, 'id_fecha')
+    campo_fecha.clear()
+    context.driver.execute_script(
+        "arguments[0].value = arguments[1];",
+        campo_fecha,
+        fecha
     )
+    campo_inicio = context.driver.find_element(By.ID, 'id_hora_inicio')
+    campo_inicio.clear()
+    context.driver.execute_script(
+        "arguments[0].value = arguments[1];",
+        campo_inicio,
+        inicio
+    )
+    campo_fin = context.driver.find_element(By.ID, 'id_hora_fin')
+    campo_fin.clear()
+    context.driver.execute_script(
+        "arguments[0].value = arguments[1];",
+        campo_fin,
+        fin
+    )
+    sleep(1)
+
+
+@given(
+    u'capturo el número de asistentes "{asistentes}" '
+    u'y el propósito "{proposito}"'
+)
+def step_impl(context, asistentes, proposito):
+    context.driver.find_element(By.ID, 'id_asistentes').send_keys(asistentes)
+    context.driver.find_element(By.ID, 'id_proposito').send_keys(proposito)
+    sleep(2)
 
 
 @when(u'presiono el botón Guardar reservación')
 def step_impl(context):
-    raise StepNotImplementedError(u'When presiono el botón Guardar reservación')
+    context.driver.find_element(By.ID, 'btn-guardar-reservacion').click()
+    sleep(2)
 
 
-@then(
-    u'puedo ver el mensaje de confirmación '
-    u'"Reservación registrada exitosamente."'
-)
-def step_impl(context):
-    raise StepNotImplementedError(
-        u'Then puedo ver el mensaje de confirmación '
-        u'"Reservación registrada exitosamente."'
+@then(u'puedo ver el mensaje de confirmación "{mensaje}"')
+def step_impl(context, mensaje):
+    obtenido = context.driver.find_element(By.ID, 'mensaje-confirmacion').text
+    context.driver.quit()
+    assert mensaje in obtenido, (
+        f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
+    sleep(5)
