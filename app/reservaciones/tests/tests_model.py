@@ -12,7 +12,7 @@ class TestReservacion(TestCase):
         self.usuario = User.objects.create_user(
             username='usuario1',
             email='usuario1@correo.com',
-            password='Password123!'
+            password='usuario123_'
         )
         self.sala = Sala.objects.create(
             nombre='Sala D',
@@ -20,6 +20,18 @@ class TestReservacion(TestCase):
             ubicacion='Biblioteca, planta baja',
             activa=True
         )
+
+    def test_crear_reservacion_valida_guarda_registro(self):
+        Reservacion.objects.create(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+        self.assertEqual(Reservacion.objects.count(), 1)
 
     def test_crear_reservacion_valida_estado_vigente(self):
         reservacion = Reservacion.objects.create(
@@ -31,9 +43,30 @@ class TestReservacion(TestCase):
             asistentes=3,
             proposito='Estudio grupal para examen'
         )
-        self.assertEqual(Reservacion.objects.count(), 1)
         self.assertEqual(reservacion.estado, 'VIGENTE')
+
+    def test_crear_reservacion_valida_registra_fecha_creacion(self):
+        reservacion = Reservacion.objects.create(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
         self.assertIsNotNone(reservacion.fecha_creacion)
+
+    def test_crear_reservacion_valida_fecha_cancelacion_nula(self):
+        reservacion = Reservacion.objects.create(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=date.today(),
+            hora_inicio=time(10, 0),
+            hora_fin=time(11, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
         self.assertIsNone(reservacion.fecha_cancelacion)
 
     def test_return_object_reservacion(self):
