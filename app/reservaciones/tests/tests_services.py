@@ -1,12 +1,16 @@
 from datetime import date, time
+from threading import Barrier, Thread
+from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.db import connections
+from django.test import TransactionTestCase
 from salas.models import Sala
+from reservaciones.models import Reservacion
 from reservaciones.services import registrar_reservacion
 
 
-class TestServicioReservacion(TestCase):
+class TestServicioReservacion(TransactionTestCase):
 
     def setUp(self):
         self.usuario = User.objects.create_user(
@@ -105,3 +109,53 @@ class TestServicioReservacion(TestCase):
         res_cancelada.save()
         nueva_res = registrar_reservacion(self.datos)
         self.assertEqual(nueva_res.estado, 'VIGENTE')
+
+    def test_solicitudes_simultaneas_solo_una_queda_vigente(self):
+        usuario2 = User.objects.create_user(
+            username='usuario2',
+            password='Password123!'
+        )
+        barrera = Barrier(2)
+        errores = []
+        create_original = Reservacion.objects.create
+
+        def create_sincronizado(**kwargs):
+            try:
+                barrera.wait(timeout=1)
+            except Exception:
+                pass
+            return create_original(**kwargs)
+
+        def intentar_reservar(usuario):
+            datos_hilo = dict(self.datos)
+            datos_hilo['usuario'] = usuario
+            try:
+                registrar_reservacion(datos_hilo)
+            except ValidationError as e:
+                errores.append(e.messages[0])
+            finally:
+                connections.close_all()
+
+        with patch.object(
+            Reservacion.objects,
+            'create',
+            side_effect=create_sincronizado
+        ):
+            hilo1 = Thread(target=intentar_reservar, args=(self.usuario,))
+            hilo2 = Thread(target=intentar_reservar, args=(usuario2,))
+            hilo1.start()
+            hilo2.start()
+            hilo1.join()
+            hilo2.join()
+
+        vigentes = Reservacion.objects.filter(
+            sala=self.sala,
+            fecha=date.today(),
+            estado='VIGENTE'
+        )
+        self.assertEqual(vigentes.count(), 1)
+        self.assertEqual(
+            errores,
+            ['La sala no está disponible en el horario solicitado.']
+        )
+
