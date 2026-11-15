@@ -1,6 +1,5 @@
 from time import sleep
 from behave import given, when, then
-from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -125,8 +124,9 @@ def step_impl(context, mensaje):
     u'y de horario "{error_horario}"'
 )
 def step_impl(context, error_fecha, error_horario):
-    raise StepNotImplementedError(
-        u'Then puedo ver los mensajes de error de fecha '
-        u'"La fecha no puede ser anterior al día actual." y de horario '
-        u'"La hora de fin debe ser posterior a la hora de inicio."'
+    obtenido = context.driver.find_element(By.ID, 'reservacion-form').text
+    context.driver.quit()
+    assert error_fecha in obtenido and error_horario in obtenido, (
+        f'Mensajes esperados {error_fecha} y {error_horario}, '
+        f'obtenido: {obtenido}'
     )
