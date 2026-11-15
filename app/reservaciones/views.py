@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 from reservaciones.forms import ReservacionForm
 from reservaciones.models import Reservacion
@@ -20,6 +21,7 @@ def listar_reservaciones(request):
 
 @login_required
 def crear_reservacion(request):
+    error_servicio = None
     if request.method == 'POST':
         form = ReservacionForm(request.POST)
         if form.is_valid():
@@ -32,19 +34,22 @@ def crear_reservacion(request):
                 'asistentes': form.cleaned_data['asistentes'],
                 'proposito': form.cleaned_data['proposito'],
             }
-            reservacion = registrar_reservacion(datos)
-            messages.success(
-                request,
-                f'Reservación registrada exitosamente. Sala: {reservacion.sala.nombre}, '
-                f'Fecha: {reservacion.fecha}, '
-                f'Horario: {reservacion.hora_inicio.strftime("%H:%M")} a '
-                f'{reservacion.hora_fin.strftime("%H:%M")}.'
-            )
-            return redirect('lista_reservaciones')
+            try:
+                reservacion = registrar_reservacion(datos)
+                messages.success(
+                    request,
+                    f'Reservación registrada exitosamente. Sala: {reservacion.sala.nombre}, '
+                    f'Fecha: {reservacion.fecha}, '
+                    f'Horario: {reservacion.hora_inicio.strftime("%H:%M")} a '
+                    f'{reservacion.hora_fin.strftime("%H:%M")}.'
+                )
+                return redirect('lista_reservaciones')
+            except ValidationError as error:
+                error_servicio = error.messages[0]
     else:
         form = ReservacionForm()
     return render(
         request,
         'reservaciones/nueva_reservacion.html',
-        {'form': form}
+        {'form': form, 'error_servicio': error_servicio}
     )
