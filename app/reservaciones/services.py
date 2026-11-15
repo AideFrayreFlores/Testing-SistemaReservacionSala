@@ -1,5 +1,7 @@
 from datetime import datetime
 from django.core.exceptions import ValidationError
+from django.db import transaction
+from salas.models import Sala
 from reservaciones.models import Reservacion
 
 
@@ -21,25 +23,28 @@ def registrar_reservacion(datos):
             'La duración de la reservación debe ser de entre 30 minutos y 2 horas.'
         )
 
-    traslape = Reservacion.objects.filter(
-        sala=sala,
-        fecha=fecha,
-        estado='VIGENTE',
-        hora_inicio__lt=hora_fin,
-        hora_fin__gt=hora_inicio
-    ).exists()
+    with transaction.atomic():
+        Sala.objects.select_for_update().get(pk=sala.pk)
 
-    if traslape:
-        raise ValidationError(
-            'La sala no está disponible en el horario solicitado.'
+        traslape = Reservacion.objects.filter(
+            sala=sala,
+            fecha=fecha,
+            estado='VIGENTE',
+            hora_inicio__lt=hora_fin,
+            hora_fin__gt=hora_inicio
+        ).exists()
+
+        if traslape:
+            raise ValidationError(
+                'La sala no está disponible en el horario solicitado.'
+            )
+
+        return Reservacion.objects.create(
+            usuario=usuario,
+            sala=sala,
+            fecha=fecha,
+            hora_inicio=hora_inicio,
+            hora_fin=hora_fin,
+            asistentes=asistentes,
+            proposito=proposito
         )
-
-    return Reservacion.objects.create(
-        usuario=usuario,
-        sala=sala,
-        fecha=fecha,
-        hora_inicio=hora_inicio,
-        hora_fin=hora_fin,
-        asistentes=asistentes,
-        proposito=proposito
-    )
