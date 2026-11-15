@@ -131,6 +131,18 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error en el formulario "La hora de inicio debe encontrarse entre 08:00 y 19:00."
 
+    Escenario: Rechazo por hora de fin fuera de horario institucional
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala B"
+        Y capturo la fecha "2027-05-25", hora de inicio "19:00" y hora de fin "20:30"
+        Y capturo el número de asistentes "2" y el propósito "Asesoría vespertina de tesis"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error en el formulario "La hora de fin no puede exceder las 20:00."
+
+
 
 
 
