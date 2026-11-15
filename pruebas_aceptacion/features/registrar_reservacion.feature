@@ -68,3 +68,14 @@ Característica: Registrar una reservación
         Y capturo el número de asistentes "3" y el propósito "Reunión de equipo de software"
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error de sala inactiva "La sala no se encuentra disponible para reservación."
+
+    Escenario: Evitar doble reservación ante solicitudes concurrentes
+        Dado que dos usuarios "alumno1" con contraseña "alumno123" y "alumno2" con contraseña "alumno567" ingresan al sistema de reservaciones
+        Y ambos abren el formulario de nueva reservación
+        Y ambos seleccionan la sala "Sala B"
+        Y ambos capturan la fecha "2027-06-15", hora de inicio "14:00" y hora de fin "15:00"
+        Y ambos capturan el número de asistentes "3" y el propósito "Sesión simultánea de estudio"
+        Cuando ambos presionan el botón Guardar reservación al mismo tiempo
+        Entonces solo una solicitud ve el mensaje de confirmación "Reservación registrada exitosamente."
+        Y la otra solicitud ve el mensaje de error "La sala no está disponible en el horario solicitado."
+<
