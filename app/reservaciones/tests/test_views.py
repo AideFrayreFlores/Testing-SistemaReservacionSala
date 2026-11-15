@@ -1,7 +1,9 @@
 from datetime import date, time
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from salas.models import Sala
+
 
 
 class TestViewsReservacion(TestCase):
@@ -42,5 +44,20 @@ class TestViewsReservacion(TestCase):
             response,
             'reservaciones/nueva_reservacion.html'
         )
+
+    def test_nueva_reservacion_response_y_nombre_url(self):
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.get('/reservaciones/nueva')
+        response_url = self.client.get(reverse('nueva_reservacion'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_url.status_code, 200)
+
+    def test_titulo_se_encuentra_en_el_template_nueva_reservacion(self):
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.get('/reservaciones/nueva')
+        titulo = '<title>Nueva reservación</title>'
+        self.assertInHTML(titulo, response.content.decode('utf-8'))
+
+
 
 
