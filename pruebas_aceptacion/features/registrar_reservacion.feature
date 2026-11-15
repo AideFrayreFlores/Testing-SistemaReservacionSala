@@ -98,4 +98,16 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error en el formulario "El propósito debe tener entre 10 y 200 caracteres."
 
+    Escenario: Rechazo por duración menor a 30 minutos
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala B"
+        Y capturo la fecha "2027-05-24", hora de inicio "10:00" y hora de fin "10:20"
+        Y capturo el número de asistentes "2" y el propósito "Repaso rápido de apuntes"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error "La duración de la reservación debe ser de entre 30 minutos y 2 horas."
+
+
 
