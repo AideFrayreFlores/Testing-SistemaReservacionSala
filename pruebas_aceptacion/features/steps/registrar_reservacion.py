@@ -1,5 +1,6 @@
 from time import sleep
 from behave import given, when, then
+from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -89,5 +90,13 @@ def step_impl(context, mensaje):
     context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
+    )
+
+
+@then(u'puedo ver el mensaje de error "{mensaje}"')
+def step_impl(context, mensaje):
+    raise StepNotImplementedError(
+        u'Then puedo ver el mensaje de error '
+        u'"La sala no está disponible en el horario solicitado."'
     )
     sleep(5)
