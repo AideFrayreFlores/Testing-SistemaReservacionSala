@@ -2,6 +2,7 @@ import os
 import threading
 from time import sleep
 from behave import given, when, then
+from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -267,4 +268,12 @@ def step_impl(context, mensaje):
     assert len(errores) == 1, (
         f'Se esperaba 1 error con "{mensaje}", '
         f'se obtuvieron {len(errores)}'
+    )
+
+
+@then(u'puedo ver el mensaje "{mensaje}" en los campos "{campos}"')
+def step_impl(context, mensaje, campos):
+    context.driver.quit()
+    raise StepNotImplementedError(
+        u'Then puedo ver el mensaje "{mensaje}" en los campos "{campos}"'
     )
