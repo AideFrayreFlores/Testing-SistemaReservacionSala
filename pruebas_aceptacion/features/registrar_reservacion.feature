@@ -142,6 +142,18 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error en el formulario "La hora de fin no puede exceder las 20:00."
 
+    Escenario: Rechazo por traslape de horario con reservación de otro usuario
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala A"
+        Y capturo la fecha "2027-05-20", hora de inicio "10:30" y hora de fin "11:30"
+        Y capturo el número de asistentes "2" y el propósito "Revisión de avance con asesor"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error "La sala no está disponible en el horario solicitado."
+
+
 
 
 
