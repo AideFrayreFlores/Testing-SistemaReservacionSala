@@ -73,6 +73,20 @@ class TestViewsReservacion(TestCase):
             'Reservación registrada exitosamente.'
         )
 
+    def test_crear_reservacion_post_traslape_muestra_error_y_no_guarda(self):
+        self.client.login(username='usuario1', password='Password123!')
+        self.client.post('/reservaciones/nueva', data=self.datos)
+        self.datos['hora_inicio'] = time(10, 30)
+        self.datos['hora_fin'] = time(11, 30)
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Reservacion.objects.count(), 1)
+        self.assertContains(
+            response,
+            'La sala no está disponible en el horario solicitado.'
+        )
+
+
 
 
 
