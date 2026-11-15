@@ -57,14 +57,3 @@ Característica: Registrar una reservación
         Y capturo el número de asistentes "3" y el propósito "Estudio grupal para examen"
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver los mensajes de error de fecha "La fecha no puede ser anterior al día actual." y de horario "La hora de fin debe ser posterior a la hora de inicio."
-
-    Escenario: Rechazo por fecha y horario inválidos
-        Dado que ingreso al sistema de reservaciones
-        Y escribo el usuario "alumno1" y la contraseña "alumno123"
-        Y presiono el botón Ingresar
-        Y doy click en el botón Nueva reservación
-        Y selecciono la sala "Sala A"
-        Y capturo la fecha "2020-01-10", hora de inicio "12:00" y hora de fin "11:00"
-        Y capturo el número de asistentes "3" y el propósito "Estudio grupal para examen"
-        Cuando presiono el botón Guardar reservación
-        Entonces puedo ver los mensajes de error de fecha "La fecha no puede ser anterior al día actual." y de horario "La hora de fin debe ser posterior a la hora de inicio."
