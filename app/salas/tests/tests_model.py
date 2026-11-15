@@ -180,3 +180,13 @@ class TestSala(TestCase):
             'Asegúrese de que este valor sea mayor o igual a 1.',
             error.exception.message_dict['capacidad']
         )
+
+    def test_sala_a_capacidad_inicial(self):
+        sala_a = Sala.objects.get(nombre='Sala A')
+        self.assertEqual(sala_a.capacidad, 4)
+
+    def test_sala_mantenimiento_inactiva_inicial(self):
+        sala_mant = Sala.objects.get(nombre='Sala de mantenimiento')
+        self.assertFalse(sala_mant.activa)
+
+
