@@ -9,7 +9,7 @@ class TestViews(TestCase):
         self.usuario = User.objects.create_user(
             username='usuario1',
             email='usuario1@correo.com',
-            password='Password123!'
+            password='usuario123_'
         )
 
     def test_login_response(self):
@@ -42,25 +42,33 @@ class TestViews(TestCase):
     def test_login_credenciales_validas_redirige(self):
         response = self.client.post(
             '/usuarios/login',
-            data={'username': 'usuario1', 'password': 'Password123!'}
+            data={'username': 'usuario1', 'password': 'usuario123_'}
         )
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/reservaciones/')
+        self.assertRedirects(
+            response,
+            '/reservaciones/',
+            fetch_redirect_response=False
+        )
 
     def test_logout_redirige_a_login(self):
-        self.client.login(username='usuario1', password='Password123!')
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.post('/usuarios/logout')
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/usuarios/login')
+        self.assertRedirects(
+            response,
+            '/usuarios/login',
+            fetch_redirect_response=False
+        )
 
-    def test_existen_dos_usuarios_de_prueba_iniciales(self):
+    def test_existe_usuario_inicial_alumno1(self):
         login_alumno1 = self.client.login(
             username='alumno1',
             password='alumno123'
         )
+        self.assertTrue(login_alumno1)
+
+    def test_existe_usuario_inicial_alumno2(self):
         login_alumno2 = self.client.login(
             username='alumno2',
             password='alumno567'
         )
-        self.assertTrue(login_alumno1)
         self.assertTrue(login_alumno2)
