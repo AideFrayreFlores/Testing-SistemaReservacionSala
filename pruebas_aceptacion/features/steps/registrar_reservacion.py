@@ -2,7 +2,6 @@ import os
 import threading
 from time import sleep
 from behave import given, when, then
-from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -273,7 +272,32 @@ def step_impl(context, mensaje):
 
 @then(u'puedo ver el mensaje "{mensaje}" en los campos "{campos}"')
 def step_impl(context, mensaje, campos):
+    sala = context.driver.find_element(
+        By.XPATH, '//*[@id="id_sala"]/../ul'
+    ).text
+    fecha = context.driver.find_element(
+        By.XPATH, '//*[@id="id_fecha"]/../ul'
+    ).text
+    inicio = context.driver.find_element(
+        By.XPATH, '//*[@id="id_hora_inicio"]/../ul'
+    ).text
+    fin = context.driver.find_element(
+        By.XPATH, '//*[@id="id_hora_fin"]/../ul'
+    ).text
+    asistentes = context.driver.find_element(
+        By.XPATH, '//*[@id="id_asistentes"]/../ul'
+    ).text
+    proposito = context.driver.find_element(
+        By.XPATH, '//*[@id="id_proposito"]/../ul'
+    ).text
     context.driver.quit()
-    raise StepNotImplementedError(
-        u'Then puedo ver el mensaje "{mensaje}" en los campos "{campos}"'
+    assert mensaje in sala, f'Faltó "{mensaje}" en Sala: {sala}'
+    assert mensaje in fecha, f'Faltó "{mensaje}" en Fecha: {fecha}'
+    assert mensaje in inicio, f'Faltó "{mensaje}" en Hora de inicio: {inicio}'
+    assert mensaje in fin, f'Faltó "{mensaje}" en Hora de fin: {fin}'
+    assert mensaje in asistentes, (
+        f'Faltó "{mensaje}" en Asistentes: {asistentes}'
+    )
+    assert mensaje in proposito, (
+        f'Faltó "{mensaje}" en Propósito: {proposito}'
     )
