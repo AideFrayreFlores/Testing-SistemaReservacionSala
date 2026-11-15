@@ -57,3 +57,14 @@ Característica: Registrar una reservación
         Y capturo el número de asistentes "3" y el propósito "Estudio grupal para examen"
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver los mensajes de error de fecha "La fecha no puede ser anterior al día actual." y de horario "La hora de fin debe ser posterior a la hora de inicio."
+
+    Escenario: Rechazo por sala inactiva
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala de mantenimiento"
+        Y capturo la fecha "2027-05-22", hora de inicio "10:00" y hora de fin "11:00"
+        Y capturo el número de asistentes "3" y el propósito "Reunión de equipo de software"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error de sala inactiva "La sala no se encuentra disponible para reservación."
