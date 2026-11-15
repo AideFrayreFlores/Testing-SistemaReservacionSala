@@ -12,7 +12,7 @@ class TestViewsReservacion(TestCase):
         self.usuario = User.objects.create_user(
             username='usuario1',
             email='usuario1@correo.com',
-            password='Password123!'
+            password='usuario123_'
         )
         self.sala = Sala.objects.create(
             nombre='Sala D',
@@ -31,84 +31,137 @@ class TestViewsReservacion(TestCase):
 
     def test_redirige_si_no_inicio_sesion_nueva_reservacion(self):
         response = self.client.get('/reservaciones/nueva')
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response.url,
-            '/usuarios/login?next=/reservaciones/nueva'
+        self.assertRedirects(
+            response,
+            '/usuarios/login?next=/reservaciones/nueva',
+            fetch_redirect_response=False
         )
 
     def test_template_correcto_nueva_reservacion(self):
-        self.client.login(username='usuario1', password='Password123!')
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.get('/reservaciones/nueva')
         self.assertTemplateUsed(
             response,
             'reservaciones/nueva_reservacion.html'
         )
 
-    def test_nueva_reservacion_response_y_nombre_url(self):
-        self.client.login(username='usuario1', password='Password123!')
+    def test_nueva_reservacion_response(self):
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.get('/reservaciones/nueva')
-        response_url = self.client.get(reverse('nueva_reservacion'))
         self.assertEqual(response.status_code, 200)
+
+    def test_nombre_url_nueva_reservacion_response(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        response_url = self.client.get(reverse('nueva_reservacion'))
         self.assertEqual(response_url.status_code, 200)
 
     def test_titulo_se_encuentra_en_el_template_nueva_reservacion(self):
-        self.client.login(username='usuario1', password='Password123!')
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.get('/reservaciones/nueva')
         titulo = '<title>Nueva reservación</title>'
         self.assertInHTML(titulo, response.content.decode('utf-8'))
 
-    def test_crear_reservacion_post_valido_redirige_y_muestra_mensaje(self):
-        self.client.login(username='usuario1', password='Password123!')
+    def test_crear_reservacion_post_valido_guarda_registro(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.client.post('/reservaciones/nueva', data=self.datos)
+        self.assertEqual(Reservacion.objects.count(), 1)
+
+    def test_crear_reservacion_post_valido_estado_vigente(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.client.post('/reservaciones/nueva', data=self.datos)
+        self.assertEqual(Reservacion.objects.first().estado, 'VIGENTE')
+
+    def test_crear_reservacion_post_valido_redirige(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
+        self.assertRedirects(
+            response,
+            '/reservaciones/',
+            fetch_redirect_response=False
+        )
+
+    def test_crear_reservacion_post_valido_muestra_mensaje(self):
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.post(
             '/reservaciones/nueva',
             data=self.datos,
             follow=True
         )
-        self.assertEqual(Reservacion.objects.count(), 1)
-        self.assertEqual(Reservacion.objects.first().estado, 'VIGENTE')
-        self.assertRedirects(response, '/reservaciones/')
         self.assertContains(
             response,
             'Reservación registrada exitosamente.'
         )
 
-    def test_crear_reservacion_post_traslape_muestra_error_y_no_guarda(self):
-        self.client.login(username='usuario1', password='Password123!')
+    def test_crear_reservacion_post_traslape_status_200(self):
+        self.client.login(username='usuario1', password='usuario123_')
         self.client.post('/reservaciones/nueva', data=self.datos)
         self.datos['hora_inicio'] = time(10, 30)
         self.datos['hora_fin'] = time(11, 30)
         response = self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertEqual(response.status_code, 200)
+
+    def test_crear_reservacion_post_traslape_no_guarda_duplicada(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.client.post('/reservaciones/nueva', data=self.datos)
+        self.datos['hora_inicio'] = time(10, 30)
+        self.datos['hora_fin'] = time(11, 30)
+        self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertEqual(Reservacion.objects.count(), 1)
+
+    def test_crear_reservacion_post_traslape_muestra_error(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.client.post('/reservaciones/nueva', data=self.datos)
+        self.datos['hora_inicio'] = time(10, 30)
+        self.datos['hora_fin'] = time(11, 30)
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertContains(
             response,
             'La sala no está disponible en el horario solicitado.'
         )
 
-    def test_crear_reservacion_post_invalido_conserva_datos_y_no_guarda(self):
-        self.client.login(username='usuario1', password='Password123!')
+    def test_crear_reservacion_post_invalido_status_200(self):
+        self.client.login(username='usuario1', password='usuario123_')
         self.datos['asistentes'] = 10
         response = self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertEqual(response.status_code, 200)
+
+    def test_crear_reservacion_post_invalido_no_guarda(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.datos['asistentes'] = 10
+        self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertEqual(Reservacion.objects.count(), 0)
+
+    def test_crear_reservacion_post_invalido_muestra_error(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.datos['asistentes'] = 10
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertContains(
             response,
             'El número de asistentes supera la capacidad de la sala.'
         )
+
+    def test_crear_reservacion_post_invalido_conserva_datos(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        self.datos['asistentes'] = 10
+        response = self.client.post('/reservaciones/nueva', data=self.datos)
         self.assertContains(response, 'Estudio grupal para examen')
 
-    def test_listar_reservaciones_anonimo_y_autenticado(self):
-        response_anon = self.client.get('/reservaciones/')
-        self.assertEqual(response_anon.status_code, 302)
-        self.assertEqual(
-            response_anon.url,
-            '/usuarios/login?next=/reservaciones/'
+    def test_listar_reservaciones_redirige_si_anonimo(self):
+        response = self.client.get('/reservaciones/')
+        self.assertRedirects(
+            response,
+            '/usuarios/login?next=/reservaciones/',
+            fetch_redirect_response=False
         )
 
-        self.client.login(username='usuario1', password='Password123!')
+    def test_listar_reservaciones_autenticado_status_200(self):
+        self.client.login(username='usuario1', password='usuario123_')
         response = self.client.get('/reservaciones/')
         self.assertEqual(response.status_code, 200)
+
+    def test_listar_reservaciones_autenticado_usa_template_correcto(self):
+        self.client.login(username='usuario1', password='usuario123_')
+        response = self.client.get('/reservaciones/')
         self.assertTemplateUsed(
             response,
             'reservaciones/lista_reservaciones.html'
