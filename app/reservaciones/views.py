@@ -38,7 +38,8 @@ def crear_reservacion(request):
                 reservacion = registrar_reservacion(datos)
                 messages.success(
                     request,
-                    f'Reservación registrada exitosamente. Sala: {reservacion.sala.nombre}, '
+                    f'Reservación registrada exitosamente. '
+                    f'Sala: {reservacion.sala.nombre}, '
                     f'Fecha: {reservacion.fecha}, '
                     f'Horario: {reservacion.hora_inicio.strftime("%H:%M")} a '
                     f'{reservacion.hora_fin.strftime("%H:%M")}.'

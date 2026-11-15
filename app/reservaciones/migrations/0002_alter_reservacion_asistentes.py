@@ -14,6 +14,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='reservacion',
             name='asistentes',
-            field=models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)]),
+            field=models.PositiveIntegerField(
+                validators=[django.core.validators.MinValueValidator(1)]
+            ),
         ),
     ]

@@ -18,17 +18,50 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Reservacion',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID'
+                    )
+                ),
                 ('fecha', models.DateField()),
                 ('hora_inicio', models.TimeField()),
                 ('hora_fin', models.TimeField()),
                 ('asistentes', models.PositiveIntegerField()),
                 ('proposito', models.CharField(max_length=200)),
-                ('estado', models.CharField(choices=[('VIGENTE', 'Vigente'), ('CANCELADA', 'Cancelada')], default='VIGENTE', max_length=15)),
+                (
+                    'estado',
+                    models.CharField(
+                        choices=[
+                            ('VIGENTE', 'Vigente'),
+                            ('CANCELADA', 'Cancelada')
+                        ],
+                        default='VIGENTE',
+                        max_length=15
+                    )
+                ),
                 ('fecha_creacion', models.DateTimeField(auto_now_add=True)),
-                ('fecha_cancelacion', models.DateTimeField(blank=True, null=True)),
-                ('sala', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='salas.sala')),
-                ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    'fecha_cancelacion',
+                    models.DateTimeField(blank=True, null=True)
+                ),
+                (
+                    'sala',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to='salas.sala'
+                    )
+                ),
+                (
+                    'usuario',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL
+                    )
+                ),
             ],
         ),
     ]

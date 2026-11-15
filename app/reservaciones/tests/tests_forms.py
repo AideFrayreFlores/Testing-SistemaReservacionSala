@@ -216,6 +216,3 @@ class TestFormReservacion(TestCase):
             form.errors['proposito'],
             ['Este campo es obligatorio.']
         )
-
-
-

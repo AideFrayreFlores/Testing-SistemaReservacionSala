@@ -113,10 +113,3 @@ class TestViewsReservacion(TestCase):
             response,
             'reservaciones/lista_reservaciones.html'
         )
-
-
-
-
-
-
-

@@ -20,7 +20,8 @@ def registrar_reservacion(datos):
 
     if duracion_minutos < 30 or duracion_minutos > 120:
         raise ValidationError(
-            'La duración de la reservación debe ser de entre 30 minutos y 2 horas.'
+            'La duración de la reservación debe ser de '
+            'entre 30 minutos y 2 horas.'
         )
 
     with transaction.atomic():

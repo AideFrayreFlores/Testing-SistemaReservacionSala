@@ -64,4 +64,3 @@ class TestViews(TestCase):
         )
         self.assertTrue(login_alumno1)
         self.assertTrue(login_alumno2)
-

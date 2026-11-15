@@ -14,6 +14,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='sala',
             name='capacidad',
-            field=models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)]),
+            field=models.PositiveIntegerField(
+                validators=[django.core.validators.MinValueValidator(1)]
+            ),
         ),
     ]
