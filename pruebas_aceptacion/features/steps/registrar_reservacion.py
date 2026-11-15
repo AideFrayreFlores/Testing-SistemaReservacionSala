@@ -1,30 +1,13 @@
-import os
 import threading
 from time import sleep
 from behave import given, when, then
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 
-def _crear_driver():
-    opciones = webdriver.ChromeOptions()
-    prefs = {
-        'credentials_enable_service': False,
-        'profile.password_manager_enabled': False,
-        'profile.password_manager_leak_detection': False,
-    }
-    opciones.add_experimental_option('prefs', prefs)
-    if os.getenv('HEADLESS', '0') == '1':
-        opciones.add_argument('--headless=new')
-    driver = webdriver.Chrome(options=opciones)
-    driver.implicitly_wait(5)
-    return driver
-
-
-def _iniciar_sesion(username, password):
-    driver = _crear_driver()
-    driver.get('http://localhost:8000/usuarios/login')
+def _iniciar_sesion(context, username, password):
+    driver = context.crear_driver()
+    driver.get(f'{context.base_url}/usuarios/login')
     sleep(1)
     driver.find_element(By.NAME, 'username').send_keys(username)
     driver.find_element(By.NAME, 'password').send_keys(password)
@@ -50,15 +33,10 @@ def _capturar_fecha_y_horas(driver, fecha, inicio, fin):
         )
 
 
-def _cerrar_drivers(drivers):
-    for driver in drivers:
-        driver.quit()
-
-
 @given(u'que ingreso al sistema de reservaciones')
 def step_impl(context):
-    context.driver = _crear_driver()
-    context.driver.get('http://localhost:8000/usuarios/login')
+    context.driver = context.crear_driver()
+    context.driver.get(f'{context.base_url}/usuarios/login')
     sleep(1)
 
 
@@ -116,7 +94,6 @@ def step_impl(context):
 @then(u'puedo ver el mensaje de confirmación "{mensaje}"')
 def step_impl(context, mensaje):
     obtenido = context.driver.find_element(By.ID, 'mensaje-confirmacion').text
-    context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
@@ -125,7 +102,6 @@ def step_impl(context, mensaje):
 @then(u'puedo ver el mensaje de error "{mensaje}"')
 def step_impl(context, mensaje):
     obtenido = context.driver.find_element(By.ID, 'error-servicio').text
-    context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
@@ -134,7 +110,6 @@ def step_impl(context, mensaje):
 @then(u'puedo ver el mensaje de error en el formulario "{mensaje}"')
 def step_impl(context, mensaje):
     obtenido = context.driver.find_element(By.CLASS_NAME, 'errorlist').text
-    context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
@@ -143,7 +118,6 @@ def step_impl(context, mensaje):
 @then(u'puedo ver el mensaje de error de validación "{mensaje}"')
 def step_impl(context, mensaje):
     obtenido = context.driver.find_element(By.CLASS_NAME, 'errorlist').text
-    context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
@@ -155,7 +129,6 @@ def step_impl(context, mensaje):
 )
 def step_impl(context, error_fecha, error_horario):
     obtenido = context.driver.find_element(By.ID, 'reservacion-form').text
-    context.driver.quit()
     assert error_fecha in obtenido and error_horario in obtenido, (
         f'Mensajes esperados {error_fecha} y {error_horario}, '
         f'obtenido: {obtenido}'
@@ -165,7 +138,6 @@ def step_impl(context, error_fecha, error_horario):
 @then(u'puedo ver el mensaje de error de sala inactiva "{mensaje}"')
 def step_impl(context, mensaje):
     obtenido = context.driver.find_element(By.CLASS_NAME, 'errorlist').text
-    context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
@@ -178,8 +150,8 @@ def step_impl(context, mensaje):
 )
 def step_impl(context, user1, pass1, user2, pass2):
     context.drivers = [
-        _iniciar_sesion(user1, pass1),
-        _iniciar_sesion(user2, pass2),
+        _iniciar_sesion(context, user1, pass1),
+        _iniciar_sesion(context, user2, pass2),
     ]
 
 
@@ -246,8 +218,6 @@ def step_impl(context, mensaje):
         elementos = driver.find_elements(By.ID, 'mensaje-confirmacion')
         if elementos and mensaje in elementos[0].text:
             confirmaciones.append(elementos[0].text)
-    if len(confirmaciones) != 1:
-        _cerrar_drivers(context.drivers)
     assert len(confirmaciones) == 1, (
         f'Se esperaba 1 confirmación con "{mensaje}", '
         f'se obtuvieron {len(confirmaciones)}'
@@ -257,13 +227,10 @@ def step_impl(context, mensaje):
 @then(u'la otra solicitud ve el mensaje de error "{mensaje}"')
 def step_impl(context, mensaje):
     errores = []
-    try:
-        for driver in context.drivers:
-            elementos = driver.find_elements(By.ID, 'error-servicio')
-            if elementos and mensaje in elementos[0].text:
-                errores.append(elementos[0].text)
-    finally:
-        _cerrar_drivers(context.drivers)
+    for driver in context.drivers:
+        elementos = driver.find_elements(By.ID, 'error-servicio')
+        if elementos and mensaje in elementos[0].text:
+            errores.append(elementos[0].text)
     assert len(errores) == 1, (
         f'Se esperaba 1 error con "{mensaje}", '
         f'se obtuvieron {len(errores)}'
@@ -290,7 +257,6 @@ def step_impl(context, mensaje, campos):
     proposito = context.driver.find_element(
         By.XPATH, '//*[@id="id_proposito"]/../ul'
     ).text
-    context.driver.quit()
     assert mensaje in sala, f'Faltó "{mensaje}" en Sala: {sala}'
     assert mensaje in fecha, f'Faltó "{mensaje}" en Fecha: {fecha}'
     assert mensaje in inicio, f'Faltó "{mensaje}" en Hora de inicio: {inicio}'
