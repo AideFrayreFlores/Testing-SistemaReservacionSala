@@ -118,6 +118,10 @@
             margin-bottom: 14px;
             list-style: none;
         }
+        .form-group .errorlist {
+            margin-top: 6px;
+            margin-bottom: 0;
+        }
         .form-group {
             margin-bottom: 16px;
         }
@@ -202,39 +206,39 @@
 
                     <div class="form-group">
                         <label for="id_sala">Sala</label>
-                        {{ form.sala.errors }}
                         {{ form.sala }}
+                        {{ form.sala.errors }}
                     </div>
 
                     <div class="form-group">
                         <label for="id_fecha">Fecha</label>
-                        {{ form.fecha.errors }}
                         <input type="date" name="fecha" id="id_fecha" value="{{ form.fecha.value|default_if_none:'' }}">
+                        {{ form.fecha.errors }}
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="id_hora_inicio">Hora de inicio</label>
-                            {{ form.hora_inicio.errors }}
                             <input type="time" name="hora_inicio" id="id_hora_inicio" value="{{ form.hora_inicio.value|default_if_none:'' }}">
+                            {{ form.hora_inicio.errors }}
                         </div>
                         <div class="form-group">
                             <label for="id_hora_fin">Hora de fin</label>
-                            {{ form.hora_fin.errors }}
                             <input type="time" name="hora_fin" id="id_hora_fin" value="{{ form.hora_fin.value|default_if_none:'' }}">
+                            {{ form.hora_fin.errors }}
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="id_asistentes">Número de asistentes</label>
-                        {{ form.asistentes.errors }}
                         <input type="number" name="asistentes" id="id_asistentes" min="1" value="{{ form.asistentes.value|default_if_none:'' }}">
+                        {{ form.asistentes.errors }}
                     </div>
 
                     <div class="form-group">
                         <label for="id_proposito">Propósito de uso (10 a 200 caracteres)</label>
-                        {{ form.proposito.errors }}
                         <input type="text" name="proposito" id="id_proposito" maxlength="200" value="{{ form.proposito.value|default_if_none:'' }}">
+                        {{ form.proposito.errors }}
                     </div>
 
                     <button type="submit" id="btn-guardar-reservacion" class="btn-submit">Guardar reservación</button>
