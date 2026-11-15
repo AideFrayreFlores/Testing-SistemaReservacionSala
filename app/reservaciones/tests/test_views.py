@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from salas.models import Sala
-
+from reservaciones.models import Reservacion
 
 
 class TestViewsReservacion(TestCase):
@@ -57,6 +57,22 @@ class TestViewsReservacion(TestCase):
         response = self.client.get('/reservaciones/nueva')
         titulo = '<title>Nueva reservación</title>'
         self.assertInHTML(titulo, response.content.decode('utf-8'))
+
+    def test_crear_reservacion_post_valido_redirige_y_muestra_mensaje(self):
+        self.client.login(username='usuario1', password='Password123!')
+        response = self.client.post(
+            '/reservaciones/nueva',
+            data=self.datos,
+            follow=True
+        )
+        self.assertEqual(Reservacion.objects.count(), 1)
+        self.assertEqual(Reservacion.objects.first().estado, 'VIGENTE')
+        self.assertRedirects(response, '/reservaciones/')
+        self.assertContains(
+            response,
+            'Reservación registrada exitosamente.'
+        )
+
 
 
 
