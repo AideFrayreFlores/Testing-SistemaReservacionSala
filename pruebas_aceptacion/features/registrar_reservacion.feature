@@ -24,3 +24,14 @@ Característica: Registrar una reservación
         Y capturo el número de asistentes "3" y el propósito "Asesoría de proyecto final"
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje de error "La sala no está disponible en el horario solicitado."
+
+    Escenario: Rechazo por capacidad excedida
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala A"
+        Y capturo la fecha "2027-05-21", hora de inicio "13:00" y hora de fin "13:40"
+        Y capturo el número de asistentes "5" y el propósito "Reunión de equipo de software"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error en el formulario "El número de asistentes supera la capacidad de la sala."
