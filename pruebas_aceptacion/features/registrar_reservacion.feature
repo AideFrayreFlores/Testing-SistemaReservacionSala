@@ -78,3 +78,12 @@ Característica: Registrar una reservación
         Cuando ambos presionan el botón Guardar reservación al mismo tiempo
         Entonces solo una solicitud ve el mensaje de confirmación "Reservación registrada exitosamente."
         Y la otra solicitud ve el mensaje de error "La sala no está disponible en el horario solicitado."
+
+    Escenario: Rechazo por campos obligatorios vacíos
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje "Este campo es obligatorio." en los campos "Sala, Fecha, Hora de inicio, Hora de fin, Número de asistentes, Propósito"
+
