@@ -52,3 +52,16 @@ class TestViews(TestCase):
         response = self.client.post('/usuarios/logout')
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/usuarios/login')
+
+    def test_existen_dos_usuarios_de_prueba_iniciales(self):
+        login_alumno1 = self.client.login(
+            username='alumno1',
+            password='alumno123'
+        )
+        login_alumno2 = self.client.login(
+            username='alumno2',
+            password='alumno567'
+        )
+        self.assertTrue(login_alumno1)
+        self.assertTrue(login_alumno2)
+
