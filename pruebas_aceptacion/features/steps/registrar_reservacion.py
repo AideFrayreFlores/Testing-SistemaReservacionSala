@@ -1,9 +1,42 @@
+import threading
 from time import sleep
 from behave import given, when, then
-from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+
+
+def _iniciar_sesion(username, password):
+    driver = webdriver.Chrome()
+    driver.get('http://localhost:8000/usuarios/login')
+    sleep(1)
+    driver.find_element(By.NAME, 'username').send_keys(username)
+    driver.find_element(By.NAME, 'password').send_keys(password)
+    sleep(1)
+    driver.find_element(By.ID, 'btn-login').click()
+    sleep(5)
+    return driver
+
+
+def _capturar_fecha_y_horas(driver, fecha, inicio, fin):
+    campos = [
+        ('id_fecha', fecha),
+        ('id_hora_inicio', inicio),
+        ('id_hora_fin', fin),
+    ]
+    for campo_id, valor in campos:
+        campo = driver.find_element(By.ID, campo_id)
+        campo.clear()
+        driver.execute_script(
+            "arguments[0].value = arguments[1];",
+            campo,
+            valor
+        )
+
+
+def _cerrar_drivers(drivers):
+    for driver in drivers:
+        driver.quit()
 
 
 @given(u'que ingreso al sistema de reservaciones')
@@ -44,27 +77,7 @@ def step_impl(context, nombre_sala):
     u'y hora de fin "{fin}"'
 )
 def step_impl(context, fecha, inicio, fin):
-    campo_fecha = context.driver.find_element(By.ID, 'id_fecha')
-    campo_fecha.clear()
-    context.driver.execute_script(
-        "arguments[0].value = arguments[1];",
-        campo_fecha,
-        fecha
-    )
-    campo_inicio = context.driver.find_element(By.ID, 'id_hora_inicio')
-    campo_inicio.clear()
-    context.driver.execute_script(
-        "arguments[0].value = arguments[1];",
-        campo_inicio,
-        inicio
-    )
-    campo_fin = context.driver.find_element(By.ID, 'id_hora_fin')
-    campo_fin.clear()
-    context.driver.execute_script(
-        "arguments[0].value = arguments[1];",
-        campo_fin,
-        fin
-    )
+    _capturar_fecha_y_horas(context.driver, fecha, inicio, fin)
     sleep(1)
 
 
@@ -144,26 +157,29 @@ def step_impl(context, mensaje):
 
 @given(
     u'que dos usuarios "{user1}" con contraseña "{pass1}" '
-    u'y "{user2}" con contraseña "{pass2}" ingresan al sistema de reservaciones'
+    u'y "{user2}" con contraseña "{pass2}" ingresan al sistema '
+    u'de reservaciones'
 )
 def step_impl(context, user1, pass1, user2, pass2):
-    raise StepNotImplementedError(
-        u'Given que dos usuarios ingresan al sistema de reservaciones'
-    )
+    context.drivers = [
+        _iniciar_sesion(user1, pass1),
+        _iniciar_sesion(user2, pass2),
+    ]
 
 
 @given(u'ambos abren el formulario de nueva reservación')
 def step_impl(context):
-    raise StepNotImplementedError(
-        u'Given ambos abren el formulario de nueva reservación'
-    )
+    for driver in context.drivers:
+        driver.find_element(By.ID, 'btn-nueva-reservacion').click()
+    sleep(2)
 
 
 @given(u'ambos seleccionan la sala "{nombre_sala}"')
 def step_impl(context, nombre_sala):
-    raise StepNotImplementedError(
-        u'Given ambos seleccionan la sala'
-    )
+    for driver in context.drivers:
+        seleccion = Select(driver.find_element(By.ID, 'id_sala'))
+        seleccion.select_by_visible_text(nombre_sala)
+    sleep(1)
 
 
 @given(
@@ -171,9 +187,9 @@ def step_impl(context, nombre_sala):
     u'y hora de fin "{fin}"'
 )
 def step_impl(context, fecha, inicio, fin):
-    raise StepNotImplementedError(
-        u'Given ambos capturan la fecha y horario'
-    )
+    for driver in context.drivers:
+        _capturar_fecha_y_horas(driver, fecha, inicio, fin)
+    sleep(1)
 
 
 @given(
@@ -181,27 +197,58 @@ def step_impl(context, fecha, inicio, fin):
     u'y el propósito "{proposito}"'
 )
 def step_impl(context, asistentes, proposito):
-    raise StepNotImplementedError(
-        u'Given ambos capturan asistentes y propósito'
-    )
+    for driver in context.drivers:
+        driver.find_element(By.ID, 'id_asistentes').send_keys(asistentes)
+        driver.find_element(By.ID, 'id_proposito').send_keys(proposito)
+    sleep(1)
 
 
 @when(u'ambos presionan el botón Guardar reservación al mismo tiempo')
 def step_impl(context):
-    raise StepNotImplementedError(
-        u'When ambos presionan el botón Guardar reservación al mismo tiempo'
-    )
+    barrera = threading.Barrier(2)
+
+    def enviar(driver):
+        boton = driver.find_element(By.ID, 'btn-guardar-reservacion')
+        barrera.wait(timeout=5)
+        boton.click()
+
+    hilos = [
+        threading.Thread(target=enviar, args=(driver,))
+        for driver in context.drivers
+    ]
+    for hilo in hilos:
+        hilo.start()
+    for hilo in hilos:
+        hilo.join()
+    sleep(3)
 
 
 @then(u'solo una solicitud ve el mensaje de confirmación "{mensaje}"')
 def step_impl(context, mensaje):
-    raise StepNotImplementedError(
-        u'Then solo una solicitud ve el mensaje de confirmación'
+    confirmaciones = []
+    for driver in context.drivers:
+        elementos = driver.find_elements(By.ID, 'mensaje-confirmacion')
+        if elementos and mensaje in elementos[0].text:
+            confirmaciones.append(elementos[0].text)
+    if len(confirmaciones) != 1:
+        _cerrar_drivers(context.drivers)
+    assert len(confirmaciones) == 1, (
+        f'Se esperaba 1 confirmación con "{mensaje}", '
+        f'se obtuvieron {len(confirmaciones)}'
     )
 
 
 @then(u'la otra solicitud ve el mensaje de error "{mensaje}"')
 def step_impl(context, mensaje):
-    raise StepNotImplementedError(
-        u'Then la otra solicitud ve el mensaje de error'
+    errores = []
+    try:
+        for driver in context.drivers:
+            elementos = driver.find_elements(By.ID, 'error-servicio')
+            if elementos and mensaje in elementos[0].text:
+                errores.append(elementos[0].text)
+    finally:
+        _cerrar_drivers(context.drivers)
+    assert len(errores) == 1, (
+        f'Se esperaba 1 error con "{mensaje}", '
+        f'se obtuvieron {len(errores)}'
     )

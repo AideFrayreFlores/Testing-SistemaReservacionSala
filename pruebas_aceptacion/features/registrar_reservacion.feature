@@ -78,4 +78,3 @@ Característica: Registrar una reservación
         Cuando ambos presionan el botón Guardar reservación al mismo tiempo
         Entonces solo una solicitud ve el mensaje de confirmación "Reservación registrada exitosamente."
         Y la otra solicitud ve el mensaje de error "La sala no está disponible en el horario solicitado."
-<
