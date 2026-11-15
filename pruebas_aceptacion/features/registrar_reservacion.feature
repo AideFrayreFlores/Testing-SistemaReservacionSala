@@ -87,3 +87,15 @@ Característica: Registrar una reservación
         Cuando presiono el botón Guardar reservación
         Entonces puedo ver el mensaje "Este campo es obligatorio." en los campos "Sala, Fecha, Hora de inicio, Hora de fin, Número de asistentes, Propósito"
 
+    Escenario: Rechazo por propósito menor a 10 caracteres
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Y doy click en el botón Nueva reservación
+        Y selecciono la sala "Sala C"
+        Y capturo la fecha "2026-12-23", hora de inicio "10:00" y hora de fin "11:00"
+        Y capturo el número de asistentes "2" y el propósito "Estudio"
+        Cuando presiono el botón Guardar reservación
+        Entonces puedo ver el mensaje de error en el formulario "El propósito debe tener entre 10 y 200 caracteres."
+
+
