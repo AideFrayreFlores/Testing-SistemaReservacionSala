@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis reservaciones</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top left, #eef2ff 0%, #e0e7ff 45%, #dbeafe 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #1e293b;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%);
+            color: #ffffff;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.2);
+            border-bottom: 3px solid #f59e0b;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .navbar-icon {
+            width: 42px;
+            height: 42px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1.5px solid #f59e0b;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .navbar-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #ffffff;
+        }
+        .navbar-title span {
+            display: block;
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: 400;
+        }
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .main-container {
+            flex: 1;
+            max-width: 1020px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 32px 20px;
+        }
+        .alert-success {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .table-card {
+            background: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.10);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            overflow: hidden;
+        }
+        .card-top-bar {
+            height: 6px;
+            background: linear-gradient(90deg, #1e3a8a, #2563eb, #f59e0b);
+        }
+        .card-header {
+            padding: 24px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .card-header h2 {
+            font-size: 21px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            font-size: 12.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .badge-vigente {
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-cancelada {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .empty-state {
+            padding: 40px 24px;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .page-footer {
+            text-align: center;
+            padding: 14px;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <div class="navbar-brand">
+            <div class="navbar-icon">📚</div>
+            <div class="navbar-title">
+                <h1>Sistema de Reservación de Salas de Estudio</h1>
+                <span>Gestión y consulta de disponibilidad de salas</span>
+            </div>
+        </div>
+        <div class="navbar-actions">
+            <a href="/reservaciones/nueva" id="btn-nueva-reservacion" class="btn-primary">+ Nueva reservación</a>
+            <form method="post" action="/usuarios/logout" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" id="btn-logout" class="btn-logout">Cerrar sesión</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="main-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-success" id="mensaje-confirmacion">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="table-card">
+            <div class="card-top-bar"></div>
+            <div class="card-header">
+                <h2>Mis reservaciones</h2>
+            </div>
+
+            {% if reservaciones %}
+                <table id="tabla-reservaciones">
+                    <thead>
+                        <tr>
+                            <th>Sala</th>
+                            <th>Fecha</th>
+                            <th>Horario</th>
+                            <th>Asistentes</th>
+                            <th>Propósito</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in reservaciones %}
+                            <tr>
+                                <td>{{ r.sala.nombre }}</td>
+                                <td>{{ r.fecha }}</td>
+                                <td>{{ r.hora_inicio|time:"H:i" }} - {{ r.hora_fin|time:"H:i" }}</td>
+                                <td>{{ r.asistentes }}</td>
+                                <td>{{ r.proposito }}</td>
+                                <td>
+                                    {% if r.estado == 'VIGENTE' %}
+                                        <span class="badge-vigente">VIGENTE</span>
+                                    {% else %}
+                                        <span class="badge-cancelada">CANCELADA</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    Aún no tienes reservaciones registradas.
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        Sistema de Reservación de Salas de Estudio &bull; Horario: 08:00 a 20:00 hrs
+    </footer>
+</body>
+</html>
