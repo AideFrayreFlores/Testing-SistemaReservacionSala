@@ -188,5 +188,3 @@ class TestSala(TestCase):
     def test_sala_mantenimiento_inactiva_inicial(self):
         sala_mant = Sala.objects.get(nombre='Sala de mantenimiento')
         self.assertFalse(sala_mant.activa)
-
-
