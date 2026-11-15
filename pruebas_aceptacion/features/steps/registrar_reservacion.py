@@ -1,6 +1,5 @@
 from time import sleep
 from behave import given, when, then
-from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -104,7 +103,8 @@ def step_impl(context, mensaje):
 
 @then(u'puedo ver el mensaje de error en el formulario "{mensaje}"')
 def step_impl(context, mensaje):
-    raise StepNotImplementedError(
-        u'Then puedo ver el mensaje de error en el formulario '
-        u'"El número de asistentes supera la capacidad de la sala."'
+    obtenido = context.driver.find_element(By.CLASS_NAME, 'errorlist').text
+    context.driver.quit()
+    assert mensaje in obtenido, (
+        f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
     )
