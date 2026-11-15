@@ -29,7 +29,6 @@ class TestFormReservacion(TestCase):
     def test_proposito_menor_10_caracteres_invalido(self):
         self.data['proposito'] = '   corto   '
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['proposito'],
             ['El propósito debe tener entre 10 y 200 caracteres.']
@@ -38,7 +37,6 @@ class TestFormReservacion(TestCase):
     def test_asistentes_cero_invalido(self):
         self.data['asistentes'] = 0
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['asistentes'],
             ['Asegúrese de que este valor sea mayor o igual a 1.']
@@ -47,7 +45,6 @@ class TestFormReservacion(TestCase):
     def test_asistentes_negativo_invalido(self):
         self.data['asistentes'] = -2
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['asistentes'],
             ['Asegúrese de que este valor sea mayor o igual a 1.']
@@ -56,7 +53,6 @@ class TestFormReservacion(TestCase):
     def test_asistentes_texto_invalido(self):
         self.data['asistentes'] = 'cinco'
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['asistentes'],
             ['Introduzca un número entero.']
@@ -65,7 +61,6 @@ class TestFormReservacion(TestCase):
     def test_asistentes_supera_capacidad_sala_invalido(self):
         self.data['asistentes'] = 5
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['asistentes'],
             ['El número de asistentes supera la capacidad de la sala.']
@@ -74,7 +69,6 @@ class TestFormReservacion(TestCase):
     def test_fecha_pasada_invalida(self):
         self.data['fecha'] = date.today() - timedelta(days=1)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['fecha'],
             ['La fecha no puede ser anterior al día actual.']
@@ -84,7 +78,6 @@ class TestFormReservacion(TestCase):
         self.data['hora_inicio'] = time(10, 0)
         self.data['hora_fin'] = time(10, 0)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['hora_fin'],
             ['La hora de fin debe ser posterior a la hora de inicio.']
@@ -94,7 +87,6 @@ class TestFormReservacion(TestCase):
         self.data['hora_inicio'] = time(11, 0)
         self.data['hora_fin'] = time(10, 0)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['hora_fin'],
             ['La hora de fin debe ser posterior a la hora de inicio.']
@@ -104,7 +96,6 @@ class TestFormReservacion(TestCase):
         self.data['hora_inicio'] = time(7, 59)
         self.data['hora_fin'] = time(9, 0)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['hora_inicio'],
             ['La hora de inicio debe encontrarse entre 08:00 y 19:00.']
@@ -114,7 +105,6 @@ class TestFormReservacion(TestCase):
         self.data['hora_inicio'] = time(19, 1)
         self.data['hora_fin'] = time(20, 0)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['hora_inicio'],
             ['La hora de inicio debe encontrarse entre 08:00 y 19:00.']
@@ -124,7 +114,6 @@ class TestFormReservacion(TestCase):
         self.data['hora_inicio'] = time(19, 0)
         self.data['hora_fin'] = time(20, 1)
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['hora_fin'],
             ['La hora de fin no puede exceder las 20:00.']
@@ -139,22 +128,22 @@ class TestFormReservacion(TestCase):
         )
         self.data['sala'] = sala_inactiva.id
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['sala'],
             ['La sala no se encuentra disponible para reservación.']
         )
 
-    def test_horario_bordes_exactos_08_y_19_a_20_valido(self):
+    def test_horario_borde_08_a_09_valido(self):
         self.data['hora_inicio'] = time(8, 0)
         self.data['hora_fin'] = time(9, 0)
         form = ReservacionForm(data=self.data)
         self.assertTrue(form.is_valid())
 
+    def test_horario_borde_19_a_20_valido(self):
         self.data['hora_inicio'] = time(19, 0)
         self.data['hora_fin'] = time(20, 0)
-        form_tarde = ReservacionForm(data=self.data)
-        self.assertTrue(form_tarde.is_valid())
+        form = ReservacionForm(data=self.data)
+        self.assertTrue(form.is_valid())
 
     def test_asistentes_igual_a_capacidad_y_fecha_futura_validos(self):
         self.data['asistentes'] = 4
@@ -162,19 +151,19 @@ class TestFormReservacion(TestCase):
         form = ReservacionForm(data=self.data)
         self.assertTrue(form.is_valid())
 
-    def test_proposito_bordes_10_y_200_caracteres_valido(self):
+    def test_proposito_borde_10_caracteres_valido(self):
         self.data['proposito'] = 'A' * 10
-        form_min = ReservacionForm(data=self.data)
-        self.assertTrue(form_min.is_valid())
+        form = ReservacionForm(data=self.data)
+        self.assertTrue(form.is_valid())
 
+    def test_proposito_borde_200_caracteres_valido(self):
         self.data['proposito'] = 'A' * 200
-        form_max = ReservacionForm(data=self.data)
-        self.assertTrue(form_max.is_valid())
+        form = ReservacionForm(data=self.data)
+        self.assertTrue(form.is_valid())
 
     def test_proposito_mayor_200_caracteres_invalido(self):
         self.data['proposito'] = 'A' * 201
         form = ReservacionForm(data=self.data)
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['proposito'],
             ['El propósito debe tener entre 10 y 200 caracteres.']
@@ -183,35 +172,48 @@ class TestFormReservacion(TestCase):
     def test_proposito_vacio_o_solo_espacios_invalido(self):
         self.data['proposito'] = '          '
         form_espacios = ReservacionForm(data=self.data)
-        self.assertFalse(form_espacios.is_valid())
         self.assertEqual(
             form_espacios.errors['proposito'],
             ['Este campo es obligatorio.']
         )
 
-    def test_campos_obligatorios_vacios_invalidos(self):
+    def test_campo_obligatorio_sala_vacio_invalido(self):
         form = ReservacionForm(data={})
-        self.assertFalse(form.is_valid())
         self.assertEqual(
             form.errors['sala'],
             ['Este campo es obligatorio.']
         )
+
+    def test_campo_obligatorio_fecha_vacio_invalido(self):
+        form = ReservacionForm(data={})
         self.assertEqual(
             form.errors['fecha'],
             ['Este campo es obligatorio.']
         )
+
+    def test_campo_obligatorio_hora_inicio_vacio_invalido(self):
+        form = ReservacionForm(data={})
         self.assertEqual(
             form.errors['hora_inicio'],
             ['Este campo es obligatorio.']
         )
+
+    def test_campo_obligatorio_hora_fin_vacio_invalido(self):
+        form = ReservacionForm(data={})
         self.assertEqual(
             form.errors['hora_fin'],
             ['Este campo es obligatorio.']
         )
+
+    def test_campo_obligatorio_asistentes_vacio_invalido(self):
+        form = ReservacionForm(data={})
         self.assertEqual(
             form.errors['asistentes'],
             ['Este campo es obligatorio.']
         )
+
+    def test_campo_obligatorio_proposito_vacio_invalido(self):
+        form = ReservacionForm(data={})
         self.assertEqual(
             form.errors['proposito'],
             ['Este campo es obligatorio.']
