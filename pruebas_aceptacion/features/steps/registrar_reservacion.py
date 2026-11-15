@@ -130,3 +130,12 @@ def step_impl(context, error_fecha, error_horario):
         f'Mensajes esperados {error_fecha} y {error_horario}, '
         f'obtenido: {obtenido}'
     )
+
+
+@then(u'puedo ver el mensaje de error de sala inactiva "{mensaje}"')
+def step_impl(context, mensaje):
+    obtenido = context.driver.find_element(By.CLASS_NAME, 'errorlist').text
+    context.driver.quit()
+    assert mensaje in obtenido, (
+        f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
+    )
