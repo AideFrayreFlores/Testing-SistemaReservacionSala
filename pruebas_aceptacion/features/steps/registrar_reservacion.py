@@ -1,5 +1,6 @@
 from time import sleep
 from behave import given, when, then
+from behave.api.pending_step import StepNotImplementedError
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -138,4 +139,69 @@ def step_impl(context, mensaje):
     context.driver.quit()
     assert mensaje in obtenido, (
         f'Mensaje esperado es {mensaje} y el obtenido es {obtenido}'
+    )
+
+
+@given(
+    u'que dos usuarios "{user1}" con contraseña "{pass1}" '
+    u'y "{user2}" con contraseña "{pass2}" ingresan al sistema de reservaciones'
+)
+def step_impl(context, user1, pass1, user2, pass2):
+    raise StepNotImplementedError(
+        u'Given que dos usuarios ingresan al sistema de reservaciones'
+    )
+
+
+@given(u'ambos abren el formulario de nueva reservación')
+def step_impl(context):
+    raise StepNotImplementedError(
+        u'Given ambos abren el formulario de nueva reservación'
+    )
+
+
+@given(u'ambos seleccionan la sala "{nombre_sala}"')
+def step_impl(context, nombre_sala):
+    raise StepNotImplementedError(
+        u'Given ambos seleccionan la sala'
+    )
+
+
+@given(
+    u'ambos capturan la fecha "{fecha}", hora de inicio "{inicio}" '
+    u'y hora de fin "{fin}"'
+)
+def step_impl(context, fecha, inicio, fin):
+    raise StepNotImplementedError(
+        u'Given ambos capturan la fecha y horario'
+    )
+
+
+@given(
+    u'ambos capturan el número de asistentes "{asistentes}" '
+    u'y el propósito "{proposito}"'
+)
+def step_impl(context, asistentes, proposito):
+    raise StepNotImplementedError(
+        u'Given ambos capturan asistentes y propósito'
+    )
+
+
+@when(u'ambos presionan el botón Guardar reservación al mismo tiempo')
+def step_impl(context):
+    raise StepNotImplementedError(
+        u'When ambos presionan el botón Guardar reservación al mismo tiempo'
+    )
+
+
+@then(u'solo una solicitud ve el mensaje de confirmación "{mensaje}"')
+def step_impl(context, mensaje):
+    raise StepNotImplementedError(
+        u'Then solo una solicitud ve el mensaje de confirmación'
+    )
+
+
+@then(u'la otra solicitud ve el mensaje de error "{mensaje}"')
+def step_impl(context, mensaje):
+    raise StepNotImplementedError(
+        u'Then la otra solicitud ve el mensaje de error'
     )
