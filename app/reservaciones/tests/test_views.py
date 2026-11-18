@@ -271,7 +271,9 @@ class TestViewsCancelacion(TestCase):
             return_value=inicio - timedelta(minutes=30)
         ):
             response = self.client.get(reverse('lista_reservaciones'))
-        self.assertContains(response, 'El periodo de cancelación ha concluido.')
+        self.assertContains(
+            response, 'El periodo de cancelación ha concluido.'
+        )
 
     def test_lista_muestra_fecha_y_hora_de_cancelacion(self):
         self.client.force_login(self.otro_usuario)
