@@ -1,6 +1,7 @@
 from datetime import datetime
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 from salas.models import Sala
 from reservaciones.models import Reservacion
 
@@ -49,3 +50,11 @@ def registrar_reservacion(datos):
             asistentes=asistentes,
             proposito=proposito
         )
+
+
+def cancelar_reservacion(reservacion_id, usuario, ahora=None):
+    reservacion = Reservacion.objects.get(pk=reservacion_id)
+    reservacion.estado = 'CANCELADA'
+    reservacion.fecha_cancelacion = ahora or timezone.now()
+    reservacion.save(update_fields=['estado', 'fecha_cancelacion'])
+    return reservacion
