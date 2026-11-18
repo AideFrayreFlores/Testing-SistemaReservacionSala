@@ -15,3 +15,25 @@ Característica: Cancelar una reservación
         Cuando registro otra reservación en el mismo horario con propósito "Reutilización para CA-07"
         Entonces puedo ver el mensaje de confirmación "Reservación registrada exitosamente."
         Y la reservación "Reutilización para CA-07" aparece vigente
+
+    Escenario: CA-08 Impedir que un usuario cancele una reservación ajena
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Y preparo un horario futuro de prueba en "Sala A"
+        Y registro una reservación en ese horario con propósito "Reservación ajena CA-08"
+        Y recuerdo la acción de cancelar de la reservación "Reservación ajena CA-08"
+        Dado que cierro sesión
+        Y escribo el usuario "alumno2" y la contraseña "alumno567"
+        Y presiono el botón Ingresar
+        Entonces la reservación "Reservación ajena CA-08" no aparece en mi lista
+        Y no veo la acción de cancelar de la reservación recordada
+        Cuando envío una petición POST de cancelación a la acción recordada
+        Entonces puedo ver el mensaje de rechazo "No tienes permiso para cancelar esta reservación."
+        Y el rechazo no revela el propósito "Reservación ajena CA-08"
+        Y guardo una captura llamada "CA08_rechazo_reservacion_ajena.png"
+        Dado que cierro sesión
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Entonces la reservación "Reservación ajena CA-08" sigue vigente con su acción de cancelar
+        Y guardo una captura llamada "CA08_reservacion_ajena_intacta.png"
