@@ -18,6 +18,12 @@ concluyó sin congelar el reloj. El escenario comprueba el aviso, la ausencia
 del botón, el rechazo controlado del POST y el estado VIGENTE. `environment.py`
 elimina esa fila por identificador al terminar el escenario.
 
+CA-10 es una regresión de negocio: crea su propia reservación por la interfaz,
+recuerda la acción de cancelar, la cancela con el botón real y guarda la fecha
+de cancelación mostrada; después reenvía el POST a la acción recordada. El
+servidor rechaza la segunda cancelación y el escenario comprueba que el badge
+CANCELADA y la fecha original no cambian.
+
 El cambio de usuario reutiliza los pasos de autenticación de Aide. Behave
 asocia cada paso a su tipo por la palabra clave, así que el cierre de sesión
 y los ingresos posteriores del escenario se declaran como "Dado" en el
@@ -120,21 +126,29 @@ def _abrir_formulario(context):
 
 def _esperar_registro(context):
     def resultado(driver):
-        errores = driver.find_elements(By.ID, 'error-servicio')
-        if errores and errores[0].text.strip():
-            raise AssertionError(
-                f'No se registró la reservación: {errores[0].text.strip()}'
+        try:
+            errores = driver.find_elements(By.ID, 'error-servicio')
+            if errores and errores[0].text.strip():
+                raise AssertionError(
+                    'No se registró la reservación: '
+                    f'{errores[0].text.strip()}'
+                )
+            errores_formulario = driver.find_elements(
+                By.CLASS_NAME, 'errorlist'
             )
-        errores_formulario = driver.find_elements(By.CLASS_NAME, 'errorlist')
-        if errores_formulario and errores_formulario[0].text.strip():
-            raise AssertionError(
-                'No se registró la reservación: '
-                f'{errores_formulario[0].text.strip()}'
+            if errores_formulario and errores_formulario[0].text.strip():
+                raise AssertionError(
+                    'No se registró la reservación: '
+                    f'{errores_formulario[0].text.strip()}'
+                )
+            mensajes = driver.find_elements(By.ID, 'mensaje-confirmacion')
+            return bool(
+                mensajes and MENSAJE_REGISTRO in mensajes[0].text
             )
-        mensajes = driver.find_elements(By.ID, 'mensaje-confirmacion')
-        return bool(
-            mensajes and MENSAJE_REGISTRO in mensajes[0].text
-        )
+        except StaleElementReferenceException:
+            # Igual que en la cancelación, el siguiente sondeo reubica los
+            # elementos cuando la navegación reemplaza el DOM.
+            return False
 
     _esperar(
         context,
@@ -145,10 +159,15 @@ def _esperar_registro(context):
 
 def _esperar_cancelacion(context):
     def resultado(driver):
-        mensajes = driver.find_elements(By.ID, 'mensaje-confirmacion')
-        if not mensajes:
+        try:
+            mensajes = driver.find_elements(By.ID, 'mensaje-confirmacion')
+            if not mensajes:
+                return False
+            texto = mensajes[0].text.strip()
+        except StaleElementReferenceException:
+            # La redirección reemplazó el DOM entre el hallazgo y la lectura;
+            # el siguiente sondeo vuelve a localizar los elementos.
             return False
-        texto = mensajes[0].text.strip()
         if MENSAJE_CANCELACION in texto:
             return True
         if MENSAJE_REGISTRO in texto:
@@ -270,6 +289,17 @@ def _verificar_fecha_y_horario(context, fila):
 def _accion_de_cancelar(fila):
     formulario = fila.find_element(By.CSS_SELECTOR, 'form[action]')
     return urlparse(formulario.get_attribute('action')).path
+
+
+def _fecha_de_cancelacion(fila):
+    celda = fila.find_element(
+        By.CSS_SELECTOR, 'td.fecha-cancelacion'
+    ).text.strip()
+    assert PATRON_FECHA_CANCELACION.fullmatch(celda), (
+        'La celda de cancelación no muestra fecha y hora: '
+        f'"{celda}"'
+    )
+    return celda
 
 
 def _identidad_de_fila(fila):
@@ -542,4 +572,42 @@ def step_impl(context, proposito):
     )
     assert not fila.find_elements(By.CSS_SELECTOR, 'form[action]'), (
         'El rechazo dejó visible la acción de cancelar de la reservación.'
+    )
+
+
+@then(
+    u'la reservación "{proposito}" queda cancelada sin acción de cancelar'
+)
+def step_impl(context, proposito):
+    fila = _fila_por_proposito(context, proposito, 'CANCELADA')
+    badge = fila.find_element(By.CSS_SELECTOR, 'span.badge-cancelada').text
+    assert badge.strip() == 'CANCELADA', (
+        f'Estado esperado CANCELADA y obtenido {badge}'
+    )
+    assert not fila.find_elements(By.CSS_SELECTOR, 'form[action]'), (
+        'La reservación cancelada conserva el formulario de cancelar.'
+    )
+    assert not fila.find_elements(By.CSS_SELECTOR, 'button.btn-cancelar'), (
+        'La reservación cancelada conserva el botón de cancelar.'
+    )
+    context.fecha_cancelacion_ca10 = _fecha_de_cancelacion(fila)
+
+
+@then(
+    u'la reservación "{proposito}" sigue cancelada con la misma '
+    u'fecha de cancelación'
+)
+def step_impl(context, proposito):
+    fila = _fila_por_proposito(context, proposito, 'CANCELADA')
+    badge = fila.find_element(By.CSS_SELECTOR, 'span.badge-cancelada').text
+    assert badge.strip() == 'CANCELADA', (
+        f'Estado esperado CANCELADA y obtenido {badge}'
+    )
+    assert not fila.find_elements(By.CSS_SELECTOR, 'form[action]'), (
+        'El rechazo restauró la acción de cancelar de la reservación.'
+    )
+    fecha = _fecha_de_cancelacion(fila)
+    assert fecha == context.fecha_cancelacion_ca10, (
+        'La fecha de cancelación cambió tras el segundo intento: esperada '
+        f'"{context.fecha_cancelacion_ca10}" y obtenida "{fecha}"'
     )

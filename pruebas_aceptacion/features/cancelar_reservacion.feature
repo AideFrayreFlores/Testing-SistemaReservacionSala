@@ -49,3 +49,17 @@ Característica: Cancelar una reservación
         Entonces puedo ver el mensaje de rechazo "El periodo de cancelación ha concluido."
         Y la reservación "Aceptación HU-02 CA-09 fuera del periodo" sigue vigente sin acción de cancelar
         Y guardo una captura llamada "CA09_rechazo_periodo_concluido.png"
+
+    Escenario: CA-10 Impedir cancelar nuevamente una reservación cancelada
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Y preparo un horario futuro de prueba en "Sala A"
+        Y registro una reservación en ese horario con propósito "Reservación ya cancelada CA-10"
+        Y recuerdo la acción de cancelar de la reservación "Reservación ya cancelada CA-10"
+        Cuando confirmo la cancelación de la reservación "Reservación ya cancelada CA-10"
+        Entonces la reservación "Reservación ya cancelada CA-10" queda cancelada sin acción de cancelar
+        Cuando envío una petición POST de cancelación a la acción recordada
+        Entonces puedo ver el mensaje de rechazo "La reservación ya fue cancelada."
+        Y la reservación "Reservación ya cancelada CA-10" sigue cancelada con la misma fecha de cancelación
+        Y guardo una captura llamada "CA10_rechazo_ya_cancelada.png"
