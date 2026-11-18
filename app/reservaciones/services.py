@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -58,7 +58,13 @@ def cancelar_reservacion(reservacion_id, usuario, ahora=None):
         raise ValidationError(
             'No tienes permiso para cancelar esta reservación.'
         )
+    referencia = ahora or timezone.now()
+    inicio = timezone.make_aware(
+        datetime.combine(reservacion.fecha, reservacion.hora_inicio)
+    )
+    if inicio - referencia <= timedelta(minutes=60):
+        raise ValidationError('El periodo de cancelación ha concluido.')
     reservacion.estado = 'CANCELADA'
-    reservacion.fecha_cancelacion = ahora or timezone.now()
+    reservacion.fecha_cancelacion = referencia
     reservacion.save(update_fields=['estado', 'fecha_cancelacion'])
     return reservacion
