@@ -288,3 +288,12 @@ class TestServicioCancelacion(TestCase):
         datos['usuario'] = self.otro_usuario
         nueva = registrar_reservacion(datos)
         self.assertEqual(nueva.estado, 'VIGENTE')
+
+    def test_cancelar_reservacion_inexistente(self):
+        inexistente = self.reservacion.pk + 1
+        with self.assertRaisesMessage(
+            ValidationError, 'La reservación no existe.'
+        ):
+            cancelar_reservacion(
+                inexistente, self.usuario, ahora=self.ahora
+            )
