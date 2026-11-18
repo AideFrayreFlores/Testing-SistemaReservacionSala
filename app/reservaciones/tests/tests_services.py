@@ -1,10 +1,11 @@
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 from salas.models import Sala
 from reservaciones.models import Reservacion
-from reservaciones.services import registrar_reservacion
+from reservaciones.services import cancelar_reservacion, registrar_reservacion
 
 
 class TestServicioReservacion(TestCase):
@@ -115,3 +116,184 @@ class TestServicioReservacion(TestCase):
         res_cancelada.save()
         nueva_res = registrar_reservacion(self.datos)
         self.assertEqual(nueva_res.estado, 'VIGENTE')
+
+
+class TestServicioCancelacion(TestCase):
+
+    def setUp(self):
+        self.usuario = User.objects.create_user(
+            username='usuario1',
+            password='usuario123_'
+        )
+        self.otro_usuario = User.objects.create_user(
+            username='usuario2',
+            password='usuario567_'
+        )
+        self.sala = Sala.objects.create(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+        self.ahora = timezone.make_aware(
+            datetime(2026, 11, 17, 10, 0)
+        )
+        self.reservacion = Reservacion.objects.create(
+            usuario=self.usuario,
+            sala=self.sala,
+            fecha=self.ahora.date(),
+            hora_inicio=time(12, 0),
+            hora_fin=time(13, 0),
+            asistentes=3,
+            proposito='Estudio grupal para examen'
+        )
+
+    def test_cancelar_reservacion_propia_vigente_con_anticipacion_valida(
+        self
+    ):
+        cancelada = cancelar_reservacion(
+            self.reservacion.id,
+            self.usuario,
+            ahora=self.ahora
+        )
+        self.assertEqual(cancelada.estado, 'CANCELADA')
+
+    def test_cancelar_reservacion_propia_registra_fecha_cancelacion(self):
+        cancelada = cancelar_reservacion(
+            self.reservacion.id,
+            self.usuario,
+            ahora=self.ahora
+        )
+        self.assertEqual(cancelada.fecha_cancelacion, self.ahora)
+
+    def test_rechazar_cancelacion_de_reservacion_ajena(self):
+        with self.assertRaisesMessage(
+            ValidationError,
+            'No tienes permiso para cancelar esta reservación.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.otro_usuario,
+                ahora=self.ahora
+            )
+
+    def test_cancelacion_ajena_conserva_reservacion_vigente(self):
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.otro_usuario,
+                ahora=self.ahora
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazar_cancelacion_con_60_minutos_exactos(self):
+        self.reservacion.hora_inicio = time(11, 0)
+        self.reservacion.save(update_fields=['hora_inicio'])
+        with self.assertRaisesMessage(
+            ValidationError,
+            'El periodo de cancelación ha concluido.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+
+    def test_cancelacion_con_60_minutos_conserva_estado_vigente(self):
+        self.reservacion.hora_inicio = time(11, 0)
+        self.reservacion.save(update_fields=['hora_inicio'])
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazar_cancelacion_con_menos_de_60_minutos(self):
+        self.reservacion.hora_inicio = time(10, 30)
+        self.reservacion.hora_fin = time(11, 30)
+        self.reservacion.save(update_fields=['hora_inicio', 'hora_fin'])
+        with self.assertRaisesMessage(
+            ValidationError,
+            'El periodo de cancelación ha concluido.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+
+    def test_cancelacion_con_menos_de_60_minutos_conserva_estado(self):
+        self.reservacion.hora_inicio = time(10, 30)
+        self.reservacion.hora_fin = time(11, 30)
+        self.reservacion.save(update_fields=['hora_inicio', 'hora_fin'])
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazar_segunda_cancelacion(self):
+        cancelar_reservacion(
+            self.reservacion.id, self.usuario, ahora=self.ahora
+        )
+        with self.assertRaisesMessage(
+            ValidationError, 'La reservación ya fue cancelada.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora + timedelta(minutes=5)
+            )
+
+    def test_segunda_cancelacion_no_cambia_fecha_original(self):
+        cancelar_reservacion(
+            self.reservacion.id, self.usuario, ahora=self.ahora
+        )
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora + timedelta(minutes=5)
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.fecha_cancelacion, self.ahora)
+
+    def test_reutilizar_horario_despues_de_cancelar(self):
+        datos = {
+            'usuario': self.usuario,
+            'sala': self.sala,
+            'fecha': self.ahora.date(),
+            'hora_inicio': time(14, 0),
+            'hora_fin': time(15, 0),
+            'asistentes': 3,
+            'proposito': 'Estudio grupal para examen'
+        }
+        original = registrar_reservacion(datos)
+        cancelar_reservacion(original.id, self.usuario, ahora=self.ahora)
+        datos['usuario'] = self.otro_usuario
+        nueva = registrar_reservacion(datos)
+        self.assertEqual(nueva.estado, 'VIGENTE')
+
+    def test_cancelar_reservacion_inexistente(self):
+        inexistente = self.reservacion.pk + 1
+        with self.assertRaisesMessage(
+            ValidationError, 'La reservación no existe.'
+        ):
+            cancelar_reservacion(
+                inexistente, self.usuario, ahora=self.ahora
+            )

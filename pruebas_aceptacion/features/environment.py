@@ -1,6 +1,8 @@
 import os
 from selenium import webdriver
 
+from fixture_ca09 import limpiar as limpiar_reserva_ca09
+
 
 def crear_driver():
     opciones = webdriver.ChromeOptions()
@@ -13,6 +15,7 @@ def crear_driver():
     if os.getenv('HEADLESS', '0') == '1':
         opciones.add_argument('--headless=new')
     driver = webdriver.Chrome(options=opciones)
+    driver.set_window_size(1400, 900)
     driver.implicitly_wait(5)
     return driver
 
@@ -29,6 +32,7 @@ def before_scenario(context, scenario):
     context.crear_driver = crear_driver
     context.driver = None
     context.drivers = []
+    context.reserva_ca09_id = None
 
 
 def after_scenario(context, scenario):
@@ -38,3 +42,5 @@ def after_scenario(context, scenario):
     for driver in getattr(context, 'drivers', []):
         _cerrar_driver(driver)
     context.drivers = []
+    if getattr(context, 'reserva_ca09_id', None) is not None:
+        limpiar_reserva_ca09(context.reserva_ca09_id)
