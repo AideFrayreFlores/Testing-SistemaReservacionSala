@@ -282,3 +282,29 @@ class TestViewsCancelacion(TestCase):
         self.reservacion.save(update_fields=['estado', 'fecha_cancelacion'])
         response = self.client.get(reverse('lista_reservaciones'))
         self.assertContains(response, '17/11/2026 15:30')
+
+    def test_lista_oculta_accion_si_concluyo_el_periodo(self):
+        self.client.force_login(self.otro_usuario)
+        inicio = timezone.make_aware(datetime.combine(
+            self.reservacion.fecha, self.reservacion.hora_inicio
+        ))
+        with patch(
+            'django.utils.timezone.now',
+            return_value=inicio - timedelta(minutes=60)
+        ):
+            response = self.client.get(reverse('lista_reservaciones'))
+        self.assertNotContains(response, f'action="{self.url}"')
+
+    def test_lista_oculta_accion_de_reservacion_cancelada(self):
+        self.client.force_login(self.otro_usuario)
+        self.client.post(self.url)
+        response = self.client.get(reverse('lista_reservaciones'))
+        self.assertNotContains(response, f'action="{self.url}"')
+
+    def test_cancelar_conserva_reservacion_en_el_historial(self):
+        self.client.force_login(self.otro_usuario)
+        response = self.client.post(self.url, follow=True)
+        self.assertContains(
+            response, '<span class="badge-cancelada">CANCELADA</span>',
+            html=True
+        )
