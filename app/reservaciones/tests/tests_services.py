@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -244,3 +244,31 @@ class TestServicioCancelacion(TestCase):
             pass
         self.reservacion.refresh_from_db()
         self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazar_segunda_cancelacion(self):
+        cancelar_reservacion(
+            self.reservacion.id, self.usuario, ahora=self.ahora
+        )
+        with self.assertRaisesMessage(
+            ValidationError, 'La reservación ya fue cancelada.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora + timedelta(minutes=5)
+            )
+
+    def test_segunda_cancelacion_no_cambia_fecha_original(self):
+        cancelar_reservacion(
+            self.reservacion.id, self.usuario, ahora=self.ahora
+        )
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora + timedelta(minutes=5)
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.fecha_cancelacion, self.ahora)
