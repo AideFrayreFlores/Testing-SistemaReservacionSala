@@ -54,6 +54,10 @@ def registrar_reservacion(datos):
 
 def cancelar_reservacion(reservacion_id, usuario, ahora=None):
     reservacion = Reservacion.objects.get(pk=reservacion_id)
+    if reservacion.usuario_id != getattr(usuario, 'pk', None):
+        raise ValidationError(
+            'No tienes permiso para cancelar esta reservación.'
+        )
     reservacion.estado = 'CANCELADA'
     reservacion.fecha_cancelacion = ahora or timezone.now()
     reservacion.save(update_fields=['estado', 'fecha_cancelacion'])
