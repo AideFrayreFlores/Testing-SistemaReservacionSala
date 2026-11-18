@@ -129,6 +129,9 @@ Con el servidor corriendo en `http://localhost:8000`, abrir una terminal en la m
    pip install behave selenium
    ```
 2. Limpiar reservaciones previas de prueba en el contenedor (desde `SistemaReservacionSala/`):
+   **Solo en una base desechable de aceptación:** este comando elimina todas
+   las reservaciones. No se debe ejecutar en una base con datos que se
+   quieran conservar. Una base recién migrada no necesita este paso.
    ```bash
    echo Reservacion.objects.all().delete() | docker exec -i reservacion-app python manage.py shell
    ```
@@ -216,4 +219,67 @@ SistemaReservacionSala/
 ├── docker-compose.yml
 ├── requirements.txt
 └── README.md
+```
+
+## 7. HU-02: cancelar una reservación
+
+En **Mis reservaciones**, el propietario puede cancelar una reservación
+vigente si faltan **más de 60 minutos** para que empiece. El botón abre un
+diálogo de confirmación. La ruta `POST /reservaciones/cancelar/<id>` exige
+sesión y CSRF, y el servicio vuelve a comprobar el propietario, el estado
+y la anticipación.
+
+La reservación queda como `CANCELADA` con fecha y hora en el historial. No
+se elimina, no bloquea más el horario y un segundo intento no modifica la
+fecha original.
+
+| Escenario | Qué verifica |
+|---|---|
+| CA-07 | Cancelar y volver a registrar el mismo horario. |
+| CA-08 | Rechazar una cancelación ajena sin mostrar datos de la reservación. |
+| CA-09 | Rechazar una cancelación fuera de plazo y mostrar el aviso. |
+| CA-10 | Rechazar un segundo intento sin cambiar la fecha original. |
+| CA-11 | Consultar el estado y la fecha de cancelación después de volver a ingresar. |
+
+## 8. Verificación de ambas historias
+
+Desde la terminal del contenedor, en `/app`, ejecuta la suite de Django
+(incluye UT-13 a UT-20 y concurrencia de HU-01). La cobertura es de líneas
+de Python: `app/.coveragerc` excluye pruebas, migraciones y archivos de
+arranque o configuración, y exige 100 %.
+
+```bash
+python manage.py makemigrations --check --dry-run
+python -m pip install coverage
+export COVERAGE_FILE=/tmp/coverage-hu02
+python -m coverage run manage.py test
+python -m coverage report -m
+python -m coverage html -d htmlcov
+```
+
+Para la regresión de navegador (19 escenarios), usa una base de aceptación
+desechable y deja Django corriendo. Desde la raíz del repositorio, en el
+anfitrión, con Behave y Selenium instalados:
+
+```bash
+# Si Docker no requiere sudo, omite sudo -v y sudo -n.
+sudo -v
+export COMANDO_DJANGO="sudo -n docker compose exec -T app python manage.py"
+export DJANGO_DIR="$PWD"
+cd pruebas_aceptacion
+HEADLESS=1 behave -f plain
+```
+
+Si defines `EVIDENCIA_HU02` con el directorio de capturas antes de ejecutar
+Behave, Selenium guardará allí los resultados visuales de HU-02. El fixture
+de CA-09 se limpia automáticamente; los escenarios que registran
+reservaciones por interfaz pueden dejar filas de prueba. La suite de
+Django usa una base temporal distinta de la de aceptación.
+
+Desde la raíz, en el anfitrión, con `flake8` y `radon` instalados:
+
+```bash
+flake8 app pruebas_aceptacion
+radon cc app pruebas_aceptacion -s -a
+git diff --check
 ```
