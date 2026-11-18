@@ -1,4 +1,5 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -254,3 +255,30 @@ class TestViewsCancelacion(TestCase):
         self.client.force_login(self.otro_usuario)
         response = self.client.post(self.url, follow=True)
         self.assertContains(response, 'Reservación cancelada exitosamente.')
+
+    def test_lista_muestra_accion_de_cancelar_reservacion_vigente(self):
+        self.client.force_login(self.otro_usuario)
+        response = self.client.get(reverse('lista_reservaciones'))
+        self.assertContains(response, f'action="{self.url}"')
+
+    def test_lista_avisa_que_el_periodo_de_cancelacion_concluyo(self):
+        self.client.force_login(self.otro_usuario)
+        inicio = timezone.make_aware(datetime.combine(
+            self.reservacion.fecha, self.reservacion.hora_inicio
+        ))
+        with patch(
+            'django.utils.timezone.now',
+            return_value=inicio - timedelta(minutes=30)
+        ):
+            response = self.client.get(reverse('lista_reservaciones'))
+        self.assertContains(response, 'El periodo de cancelación ha concluido.')
+
+    def test_lista_muestra_fecha_y_hora_de_cancelacion(self):
+        self.client.force_login(self.otro_usuario)
+        self.reservacion.estado = 'CANCELADA'
+        self.reservacion.fecha_cancelacion = timezone.make_aware(
+            datetime(2026, 11, 17, 15, 30)
+        )
+        self.reservacion.save(update_fields=['estado', 'fecha_cancelacion'])
+        response = self.client.get(reverse('lista_reservaciones'))
+        self.assertContains(response, '17/11/2026 15:30')
