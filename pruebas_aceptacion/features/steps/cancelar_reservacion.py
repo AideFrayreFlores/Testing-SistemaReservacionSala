@@ -1,16 +1,22 @@
-"""Pasos de aceptación para CA-07 y CA-08 de la cancelación.
+"""Pasos de aceptación para CA-07, CA-08 y CA-09 de la cancelación.
 
-El horario de prueba se elige al azar entre 30 y 180 días futuros, en bloques
-de 30 minutos dentro del horario institucional. Así, las ejecuciones repetidas
-no reutilizan el mismo espacio con alta probabilidad. Las reservaciones de
-prueba se identifican por sus propósitos ("... CA-07", "CA-08 ..."), lo que
-permitirá una limpieza determinista en un commit posterior; este archivo no
-ejecuta comandos de limpieza.
+El horario de prueba de CA-07 y CA-08 se elige al azar entre 30 y 180 días
+futuros, en bloques de 30 minutos dentro del horario institucional. Así, las
+ejecuciones repetidas no reutilizan el mismo espacio con alta probabilidad.
+Las reservaciones de prueba se identifican por sus propósitos ("... CA-07",
+"CA-08 ..."), lo que permitirá una limpieza determinista en un commit
+posterior; este archivo no ejecuta comandos de limpieza.
 
 CA-08 crea la reservación por la interfaz como su propietario, recuerda la
 acción de cancelar de su fila y comprueba, desde una sesión distinta, que ni
 la fila ni la acción se muestran y que un POST con el token CSRF de la sesión
 intrusa recibe el rechazo controlado del servidor sin revelar el propósito.
+
+CA-09 usa el fixture `preparar_reserva_ca09`, que crea una sola reservación
+de alumno1 a 30 minutos del momento actual; así el periodo de cancelación ya
+concluyó sin congelar el reloj. El escenario comprueba el aviso, la ausencia
+del botón, el rechazo controlado del POST y el estado VIGENTE. `environment.py`
+elimina esa fila por identificador al terminar el escenario.
 
 El cambio de usuario reutiliza los pasos de autenticación de Aide. Behave
 asocia cada paso a su tipo por la palabra clave, así que el cierre de sesión
@@ -22,11 +28,12 @@ genéricos para reutilizarlos en CA-09 y CA-10.
 import os
 import random
 import re
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from behave import given, then, when
+from fixture_ca09 import preparar as preparar_reserva_ca09
 from selenium.common.exceptions import (
     StaleElementReferenceException,
     TimeoutException,
@@ -199,12 +206,17 @@ def _estado_fila(fila):
     return badges[0].text.strip() if badges else ''
 
 
-def _fila_por_proposito(context, proposito, estado):
+def _fila_por_proposito(context, proposito, estado,
+                        fecha=None, horario=None):
     """Localiza la fila del propósito dentro del horario preparado.
 
     El filtro por fecha, horario y estado evita confundirla con filas de
-    ejecuciones anteriores que usaron el mismo propósito.
+    ejecuciones anteriores que usaron el mismo propósito. CA-09 pasa la
+    fecha y el horario devueltos por su fixture en lugar de los de CA-07.
     """
+
+    fecha = fecha or context.fecha_ca07
+    horario = horario or _horario_esperado(context)
 
     def localizar(driver):
         filas = driver.find_elements(
@@ -214,9 +226,9 @@ def _fila_por_proposito(context, proposito, estado):
             celdas = fila.find_elements(By.TAG_NAME, 'td')
             if len(celdas) < 8 or celdas[4].text.strip() != proposito:
                 continue
-            if not _fecha_coincide(celdas[1].text, context.fecha_ca07):
+            if not _fecha_coincide(celdas[1].text, fecha):
                 continue
-            if ' '.join(celdas[2].text.split()) != _horario_esperado(context):
+            if ' '.join(celdas[2].text.split()) != horario:
                 continue
             if _estado_fila(fila) != estado:
                 continue
@@ -228,6 +240,16 @@ def _fila_por_proposito(context, proposito, estado):
         localizar,
         f'no se encontró la reservación "{proposito}" en estado '
         f'{estado} dentro del horario preparado'
+    )
+
+
+def _fila_ca09(context, proposito, estado):
+    return _fila_por_proposito(
+        context,
+        proposito,
+        estado,
+        fecha=context.fecha_ca09,
+        horario=context.horario_ca09
     )
 
 
@@ -375,6 +397,19 @@ def step_impl(context, proposito):
     )
 
 
+@given(u'que preparo una reservación que inicia en 30 minutos')
+def step_impl(context):
+    datos = preparar_reserva_ca09()
+    context.reserva_ca09_id = datos['id']
+    context.fecha_ca09 = date.fromisoformat(datos['fecha'])
+    context.horario_ca09 = (
+        f'{datos["hora_inicio"]} - {datos["hora_fin"]}'
+    )
+    context.accion_cancelacion = (
+        f'/reservaciones/cancelar/{datos["id"]}'
+    )
+
+
 @given(
     u'recuerdo la acción de cancelar de la reservación "{proposito}"'
 )
@@ -470,4 +505,41 @@ def step_impl(context, proposito):
     )
     assert _identidad_de_fila(fila) == context.identidad_fila, (
         'La fecha u horario de la reservación cambiaron tras el intento ajeno.'
+    )
+
+
+@then(u'la reservación "{proposito}" no muestra la acción de cancelar')
+def step_impl(context, proposito):
+    fila = _fila_ca09(context, proposito, 'VIGENTE')
+    assert not fila.find_elements(By.CSS_SELECTOR, 'form[action]'), (
+        'La reservación fuera del periodo muestra el formulario de cancelar.'
+    )
+    assert not fila.find_elements(By.CSS_SELECTOR, 'button.btn-cancelar'), (
+        'La reservación fuera del periodo muestra el botón de cancelar.'
+    )
+
+
+@then(u'la reservación "{proposito}" muestra el aviso "{aviso}"')
+def step_impl(context, proposito, aviso):
+    fila = _fila_ca09(context, proposito, 'VIGENTE')
+    elemento = fila.find_element(
+        By.CSS_SELECTOR, 'span.aviso-cancelacion'
+    )
+    obtenido = elemento.text.strip()
+    assert obtenido == aviso, (
+        f'Aviso esperado "{aviso}" y obtenido "{obtenido}"'
+    )
+
+
+@then(
+    u'la reservación "{proposito}" sigue vigente sin acción de cancelar'
+)
+def step_impl(context, proposito):
+    fila = _fila_ca09(context, proposito, 'VIGENTE')
+    badge = fila.find_element(By.CSS_SELECTOR, 'span.badge-vigente').text
+    assert badge.strip() == 'VIGENTE', (
+        f'Estado esperado VIGENTE y obtenido {badge}'
+    )
+    assert not fila.find_elements(By.CSS_SELECTOR, 'form[action]'), (
+        'El rechazo dejó visible la acción de cancelar de la reservación.'
     )

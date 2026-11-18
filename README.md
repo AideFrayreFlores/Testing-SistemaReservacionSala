@@ -132,7 +132,7 @@ Con el servidor corriendo en `http://localhost:8000`, abrir una terminal en la m
    ```bash
    echo Reservacion.objects.all().delete() | docker exec -i reservacion-app python manage.py shell
    ```
-3. Ejecutar las **14 pruebas de aceptación** (cubren `CA-01` a `CA-06`, campos obligatorios, propósito mínimo, duración y horario institucional) desde `pruebas_aceptacion`:
+3. Ejecutar las pruebas de aceptación de registro y cancelación de reservaciones desde `pruebas_aceptacion`:
    - Con navegador Chrome visible (por defecto):
      ```cmd
      cd pruebas_aceptacion
@@ -143,6 +143,49 @@ Con el servidor corriendo en `http://localhost:8000`, abrir una terminal en la m
      set HEADLESS=1
      behave
      ```
+
+#### 5.1 Datos de apoyo del escenario CA-09
+
+El escenario `CA-09 Impedir la cancelación fuera del periodo permitido`
+necesita una reservación de `alumno1` que inicie ~30 minutos después del
+momento de la ejecución. No se congela el reloj: Behave ejecuta el comando
+`preparar_reserva_ca09` al comenzar el escenario y `--limpiar ID` al
+terminar, que elimina únicamente esa fila.
+
+- **Con Docker** (desde `SistemaReservacionSala/`):
+  ```bash
+  export COMANDO_DJANGO="docker compose exec -T app python manage.py"
+  export DJANGO_DIR="$PWD"
+  cd pruebas_aceptacion
+  HEADLESS=1 behave --name "CA-09"
+  ```
+  Si Docker requiere `sudo`, ejecuta `sudo -v` en la misma terminal y usa
+  `sudo -n docker compose` en `COMANDO_DJANGO`.
+- **Con SQLite aislado**: el servidor y el comando de datos deben usar el
+  mismo archivo de base de datos, no `:memory:`. Exporta `PYTHONPATH` y
+  `DJANGO_SETTINGS_MODULE` del módulo de settings temporal y, si Django está
+  en otro entorno virtual, configura también `COMANDO_DJANGO`:
+  ```bash
+  export PYTHONPATH=/tmp/opencode
+  export DJANGO_SETTINGS_MODULE=settings_hu02_archivo
+  cd pruebas_aceptacion
+  HEADLESS=1 behave --name "CA-09"
+  ```
+- **Ejecución manual del comando**:
+  ```bash
+  # Docker
+  docker compose exec app python manage.py preparar_reserva_ca09
+  docker compose exec app python manage.py preparar_reserva_ca09 --limpiar 12
+  # SQLite
+  cd app
+  PYTHONPATH=/tmp/opencode DJANGO_SETTINGS_MODULE=settings_hu02_archivo \
+    python manage.py preparar_reserva_ca09
+  ```
+  El comando imprime un JSON con el `id`. `--limpiar ID` solo borra la fila
+  con el propósito de CA-09 de `alumno1`; ante cualquier otra reservación
+  falla sin eliminarla.
+- Evidencia opcional: con `EVIDENCIA_HU02` apuntando a un directorio, el
+  escenario guarda `CA09_rechazo_periodo_concluido.png`.
 
 ---
 
@@ -157,14 +200,18 @@ SistemaReservacionSala/
 │   ├── usuarios/                 # Autenticación (login/logout), usuarios iniciales y pruebas (9 tests)
 │   └── reservaciones/            # Modelo Reservacion, ReservacionForm, servicio transaccional,
 │                                 # vistas, templates y pruebas unitarias/concurrencia (74 tests)
+│       └── management/commands/  # preparar_reserva_ca09: fixture aislado del escenario CA-09
 ├── pruebas_aceptacion/
 │   ├── .behaverc                 # Configuración de Behave en español (lang:es)
 │   └── features/
-│       ├── environment.py        # Driver Chrome (visible/headless), URL base y cierre automático
+│       ├── environment.py        # Driver Chrome (visible/headless), URL base y limpieza de CA-09
+│       ├── fixture_ca09.py       # Invocación del comando de datos de CA-09
 │       ├── registrar_reservacion.feature
+│       ├── cancelar_reservacion.feature
 │       └── steps/
 │           ├── autenticacion.py
-│           └── registrar_reservacion.py
+│           ├── registrar_reservacion.py
+│           └── cancelar_reservacion.py
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt

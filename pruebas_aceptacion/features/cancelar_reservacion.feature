@@ -37,3 +37,15 @@ Característica: Cancelar una reservación
         Y presiono el botón Ingresar
         Entonces la reservación "Reservación ajena CA-08" sigue vigente con su acción de cancelar
         Y guardo una captura llamada "CA08_reservacion_ajena_intacta.png"
+
+    Escenario: CA-09 Impedir la cancelación fuera del periodo permitido
+        Dado que preparo una reservación que inicia en 30 minutos
+        Y que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Entonces la reservación "Aceptación HU-02 CA-09 fuera del periodo" no muestra la acción de cancelar
+        Y la reservación "Aceptación HU-02 CA-09 fuera del periodo" muestra el aviso "El periodo de cancelación ha concluido."
+        Cuando envío una petición POST de cancelación a la acción recordada
+        Entonces puedo ver el mensaje de rechazo "El periodo de cancelación ha concluido."
+        Y la reservación "Aceptación HU-02 CA-09 fuera del periodo" sigue vigente sin acción de cancelar
+        Y guardo una captura llamada "CA09_rechazo_periodo_concluido.png"
