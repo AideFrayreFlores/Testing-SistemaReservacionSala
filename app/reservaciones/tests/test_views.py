@@ -166,3 +166,15 @@ class TestViewsReservacion(TestCase):
             response,
             'reservaciones/lista_reservaciones.html'
         )
+
+
+class TestViewsCancelacion(TestCase):
+
+    def test_impedir_cancelacion_anonima(self):
+        url = '/reservaciones/cancelar/1'
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            f'/usuarios/login?next={url}',
+            fetch_redirect_response=False
+        )
