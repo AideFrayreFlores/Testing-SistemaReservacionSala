@@ -12,6 +12,7 @@ Característica: Cancelar una reservación
         Cuando confirmo la cancelación de la reservación "Estudio para CA-07"
         Entonces puedo ver el mensaje de confirmación "Reservación cancelada exitosamente."
         Y la reservación "Estudio para CA-07" aparece cancelada con fecha y hora
+        Y guardo una captura llamada "CA07_historial_cancelada.png"
         Cuando registro otra reservación en el mismo horario con propósito "Reutilización para CA-07"
         Entonces puedo ver el mensaje de confirmación "Reservación registrada exitosamente."
         Y la reservación "Reutilización para CA-07" aparece vigente
@@ -63,3 +64,17 @@ Característica: Cancelar una reservación
         Entonces puedo ver el mensaje de rechazo "La reservación ya fue cancelada."
         Y la reservación "Reservación ya cancelada CA-10" sigue cancelada con la misma fecha de cancelación
         Y guardo una captura llamada "CA10_rechazo_ya_cancelada.png"
+
+    Escenario: CA-11 Consultar una reservación cancelada en el historial
+        Dado que ingreso al sistema de reservaciones
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Y preparo un horario futuro de prueba en "Sala B"
+        Y registro una reservación en ese horario con propósito "Historial de cancelación CA-11"
+        Cuando confirmo la cancelación de la reservación "Historial de cancelación CA-11"
+        Entonces puedo ver el mensaje de confirmación "Reservación cancelada exitosamente."
+        Dado que cierro sesión
+        Y escribo el usuario "alumno1" y la contraseña "alumno123"
+        Y presiono el botón Ingresar
+        Entonces la reservación "Historial de cancelación CA-11" aparece cancelada con fecha y hora
+        Y guardo una captura llamada "CA11_historial_cancelada.png"

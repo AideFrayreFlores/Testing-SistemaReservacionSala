@@ -389,13 +389,7 @@ def step_impl(context, proposito):
     assert badge.strip() == 'CANCELADA', (
         f'Estado esperado CANCELADA y obtenido {badge}'
     )
-    celda_cancelacion = fila.find_element(
-        By.CSS_SELECTOR, 'td.fecha-cancelacion'
-    ).text.strip()
-    assert PATRON_FECHA_CANCELACION.fullmatch(celda_cancelacion), (
-        'La celda de cancelación no muestra fecha y hora: '
-        f'"{celda_cancelacion}"'
-    )
+    celda_cancelacion = _fecha_de_cancelacion(fila)
     assert celda_cancelacion.startswith(
         _fecha_local().strftime('%d/%m/%Y')
     ), (
@@ -403,7 +397,6 @@ def step_impl(context, proposito):
         f'"{celda_cancelacion}"'
     )
     _verificar_fecha_y_horario(context, fila)
-    _guardar_evidencia(context, 'CA07_historial_cancelada.png')
 
 
 @when(
