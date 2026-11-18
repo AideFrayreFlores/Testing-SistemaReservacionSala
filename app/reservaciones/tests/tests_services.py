@@ -272,3 +272,19 @@ class TestServicioCancelacion(TestCase):
             pass
         self.reservacion.refresh_from_db()
         self.assertEqual(self.reservacion.fecha_cancelacion, self.ahora)
+
+    def test_reutilizar_horario_despues_de_cancelar(self):
+        datos = {
+            'usuario': self.usuario,
+            'sala': self.sala,
+            'fecha': self.ahora.date(),
+            'hora_inicio': time(14, 0),
+            'hora_fin': time(15, 0),
+            'asistentes': 3,
+            'proposito': 'Estudio grupal para examen'
+        }
+        original = registrar_reservacion(datos)
+        cancelar_reservacion(original.id, self.usuario, ahora=self.ahora)
+        datos['usuario'] = self.otro_usuario
+        nueva = registrar_reservacion(datos)
+        self.assertEqual(nueva.estado, 'VIGENTE')
