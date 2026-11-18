@@ -188,3 +188,30 @@ class TestServicioCancelacion(TestCase):
             pass
         self.reservacion.refresh_from_db()
         self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazar_cancelacion_con_60_minutos_exactos(self):
+        self.reservacion.hora_inicio = time(11, 0)
+        self.reservacion.save(update_fields=['hora_inicio'])
+        with self.assertRaisesMessage(
+            ValidationError,
+            'El periodo de cancelación ha concluido.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+
+    def test_cancelacion_con_60_minutos_conserva_estado_vigente(self):
+        self.reservacion.hora_inicio = time(11, 0)
+        self.reservacion.save(update_fields=['hora_inicio'])
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.usuario,
+                ahora=self.ahora
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
