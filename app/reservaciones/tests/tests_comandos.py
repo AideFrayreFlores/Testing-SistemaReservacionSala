@@ -1,6 +1,7 @@
 import json
 from datetime import date, datetime, time, timedelta
 from io import StringIO
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -37,7 +38,9 @@ class TestComandoPrepararReservaCa09(TestCase):
         )
 
     def test_prepara_una_reserva_vigente_en_30_minutos(self):
-        datos = self._ejecutar()
+        ahora = timezone.make_aware(datetime(2026, 11, 17, 10, 0))
+        with patch('django.utils.timezone.localtime', return_value=ahora):
+            datos = self._ejecutar()
         reservacion = Reservacion.objects.get(pk=datos['id'])
         self.assertEqual(reservacion.usuario, self.usuario)
         self.assertEqual(reservacion.sala, self.sala)
@@ -46,9 +49,7 @@ class TestComandoPrepararReservaCa09(TestCase):
         inicio = timezone.make_aware(
             datetime.combine(reservacion.fecha, reservacion.hora_inicio)
         )
-        ahora = timezone.localtime()
-        self.assertGreaterEqual(inicio, ahora + timedelta(minutes=29))
-        self.assertLessEqual(inicio, ahora + timedelta(minutes=31))
+        self.assertEqual(inicio, ahora + timedelta(minutes=30))
 
     def test_preparar_de_nuevo_reemplaza_solo_su_fila(self):
         otra = self._crear_otra_reservacion()
@@ -86,4 +87,17 @@ class TestComandoPrepararReservaCa09(TestCase):
     def test_falla_si_falta_el_usuario_de_prueba(self):
         self.usuario.delete()
         with self.assertRaises(CommandError):
+            self._ejecutar()
+
+    def test_ajusta_hora_fin_si_cruza_medianoche(self):
+        ahora = timezone.make_aware(datetime(2026, 11, 17, 22, 45))
+        with patch('django.utils.timezone.localtime', return_value=ahora):
+            datos = self._ejecutar()
+        self.assertEqual(datos['hora_fin'], '23:59')
+
+    def test_falla_si_falta_la_sala_de_prueba(self):
+        self.sala.delete()
+        with self.assertRaisesMessage(
+            CommandError, 'Falta la sala de prueba Sala A.'
+        ):
             self._ejecutar()
