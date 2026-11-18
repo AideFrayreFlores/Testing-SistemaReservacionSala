@@ -53,7 +53,10 @@ def registrar_reservacion(datos):
 
 
 def cancelar_reservacion(reservacion_id, usuario, ahora=None):
-    reservacion = Reservacion.objects.get(pk=reservacion_id)
+    try:
+        reservacion = Reservacion.objects.get(pk=reservacion_id)
+    except Reservacion.DoesNotExist:
+        raise ValidationError('La reservación no existe.') from None
     if reservacion.usuario_id != getattr(usuario, 'pk', None):
         raise ValidationError(
             'No tienes permiso para cancelar esta reservación.'
