@@ -99,6 +99,19 @@
             margin-bottom: 20px;
             font-weight: 500;
         }
+        .alert-error {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            border-left-color: #dc2626;
+            color: #991b1b;
+        }
+        .btn-cancelar {
+            background: #b91c1c;
+        }
+        .aviso-cancelacion {
+            color: #92400e;
+            font-size: 12px;
+        }
         .table-card {
             background: #ffffff;
             border-radius: 18px;
@@ -191,7 +204,7 @@
     <main class="main-container">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert-success" id="mensaje-confirmacion">{{ message }}</div>
+                <div class="alert-success{% if message.tags == 'error' %} alert-error{% endif %}" id="mensaje-confirmacion">{{ message }}</div>
             {% endfor %}
         {% endif %}
 
@@ -211,6 +224,8 @@
                             <th>Asistentes</th>
                             <th>Propósito</th>
                             <th>Estado</th>
+                            <th>Cancelación</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -226,6 +241,25 @@
                                         <span class="badge-vigente">VIGENTE</span>
                                     {% else %}
                                         <span class="badge-cancelada">CANCELADA</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fecha-cancelacion">
+                                    {% if r.fecha_cancelacion %}
+                                        {{ r.fecha_cancelacion|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.puede_cancelarse %}
+                                        <form method="post" action="{% url 'cancelar_reservacion' r.pk %}" onsubmit="return confirm('¿Cancelar esta reservación?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-primary btn-cancelar">Cancelar</button>
+                                        </form>
+                                    {% elif r.estado == 'VIGENTE' %}
+                                        <span class="aviso-cancelacion">El periodo de cancelación ha concluido.</span>
+                                    {% else %}
+                                        —
                                     {% endif %}
                                 </td>
                             </tr>
