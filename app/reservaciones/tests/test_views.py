@@ -1,6 +1,6 @@
 from datetime import date, time, timedelta
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from salas.models import Sala
@@ -218,3 +218,39 @@ class TestViewsCancelacion(TestCase):
         self.client.force_login(self.usuario)
         response = self.client.post(self.url, follow=True)
         self.assertNotContains(response, self.reservacion.proposito)
+
+    def test_get_no_cancela_reservacion(self):
+        self.client.force_login(self.otro_usuario)
+        response = self.client.get(self.url)
+        self.reservacion.refresh_from_db()
+        self.assertEqual(
+            (response.status_code, self.reservacion.estado),
+            (405, 'VIGENTE')
+        )
+
+    def test_post_sin_csrf_no_cancela_reservacion(self):
+        cliente = Client(enforce_csrf_checks=True)
+        cliente.force_login(self.otro_usuario)
+        response = cliente.post(self.url)
+        self.reservacion.refresh_from_db()
+        self.assertEqual(
+            (response.status_code, self.reservacion.estado),
+            (403, 'VIGENTE')
+        )
+
+    def test_post_con_csrf_cancela_reservacion(self):
+        cliente = Client(enforce_csrf_checks=True)
+        cliente.force_login(self.otro_usuario)
+        cliente.get(reverse('lista_reservaciones'))
+        token = cliente.cookies['csrftoken'].value
+        response = cliente.post(self.url, {'csrfmiddlewaretoken': token})
+        self.reservacion.refresh_from_db()
+        self.assertEqual(
+            (response.status_code, self.reservacion.estado),
+            (302, 'CANCELADA')
+        )
+
+    def test_cancelacion_propia_muestra_mensaje_de_exito(self):
+        self.client.force_login(self.otro_usuario)
+        response = self.client.post(self.url, follow=True)
+        self.assertContains(response, 'Reservación cancelada exitosamente.')
