@@ -165,3 +165,26 @@ class TestServicioCancelacion(TestCase):
             ahora=self.ahora
         )
         self.assertEqual(cancelada.fecha_cancelacion, self.ahora)
+
+    def test_rechazar_cancelacion_de_reservacion_ajena(self):
+        with self.assertRaisesMessage(
+            ValidationError,
+            'No tienes permiso para cancelar esta reservación.'
+        ):
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.otro_usuario,
+                ahora=self.ahora
+            )
+
+    def test_cancelacion_ajena_conserva_reservacion_vigente(self):
+        try:
+            cancelar_reservacion(
+                self.reservacion.id,
+                self.otro_usuario,
+                ahora=self.ahora
+            )
+        except ValidationError:
+            pass
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
