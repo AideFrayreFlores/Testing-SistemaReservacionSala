@@ -52,9 +52,26 @@ def registrar_reservacion(datos):
         )
 
 
+def _tiene_anticipacion(reservacion, ahora):
+    inicio = timezone.make_aware(
+        datetime.combine(reservacion.fecha, reservacion.hora_inicio),
+        timezone.get_default_timezone()
+    )
+    return inicio - ahora > timedelta(minutes=60)
+
+
+def puede_cancelar(reservacion, ahora=None):
+    return reservacion.estado == 'VIGENTE' and _tiene_anticipacion(
+        reservacion, ahora or timezone.now()
+    )
+
+
+@transaction.atomic
 def cancelar_reservacion(reservacion_id, usuario, ahora=None):
     try:
-        reservacion = Reservacion.objects.get(pk=reservacion_id)
+        reservacion = Reservacion.objects.select_for_update().get(
+            pk=reservacion_id
+        )
     except Reservacion.DoesNotExist:
         raise ValidationError('La reservación no existe.') from None
     if reservacion.usuario_id != getattr(usuario, 'pk', None):
@@ -64,10 +81,7 @@ def cancelar_reservacion(reservacion_id, usuario, ahora=None):
     if reservacion.estado != 'VIGENTE':
         raise ValidationError('La reservación ya fue cancelada.')
     referencia = ahora or timezone.now()
-    inicio = timezone.make_aware(
-        datetime.combine(reservacion.fecha, reservacion.hora_inicio)
-    )
-    if inicio - referencia <= timedelta(minutes=60):
+    if not _tiene_anticipacion(reservacion, referencia):
         raise ValidationError('El periodo de cancelación ha concluido.')
     reservacion.estado = 'CANCELADA'
     reservacion.fecha_cancelacion = referencia
