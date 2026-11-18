@@ -1,7 +1,8 @@
-from datetime import date, time
+from datetime import date, time, timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from salas.models import Sala
 from reservaciones.models import Reservacion
 
@@ -170,6 +171,27 @@ class TestViewsReservacion(TestCase):
 
 class TestViewsCancelacion(TestCase):
 
+    @classmethod
+    def setUpTestData(cls):
+        cls.usuario = User.objects.create_user(username='usuario1')
+        cls.otro_usuario = User.objects.create_user(username='usuario2')
+        cls.sala = Sala.objects.create(
+            nombre='Sala D',
+            capacidad=4,
+            ubicacion='Biblioteca, planta baja',
+            activa=True
+        )
+        cls.reservacion = Reservacion.objects.create(
+            usuario=cls.otro_usuario,
+            sala=cls.sala,
+            fecha=timezone.localdate() + timedelta(days=2),
+            hora_inicio=time(14, 0),
+            hora_fin=time(15, 0),
+            asistentes=2,
+            proposito='Propósito privado del propietario'
+        )
+        cls.url = reverse('cancelar_reservacion', args=[cls.reservacion.pk])
+
     def test_impedir_cancelacion_anonima(self):
         url = '/reservaciones/cancelar/1'
         response = self.client.post(url)
@@ -178,3 +200,21 @@ class TestViewsCancelacion(TestCase):
             f'/usuarios/login?next={url}',
             fetch_redirect_response=False
         )
+
+    def test_impedir_cancelacion_manipulada_de_reservacion_ajena(self):
+        self.client.force_login(self.usuario)
+        response = self.client.post(self.url, follow=True)
+        self.assertContains(
+            response, 'No tienes permiso para cancelar esta reservación.'
+        )
+
+    def test_cancelacion_ajena_conserva_estado_vigente(self):
+        self.client.force_login(self.usuario)
+        self.client.post(self.url)
+        self.reservacion.refresh_from_db()
+        self.assertEqual(self.reservacion.estado, 'VIGENTE')
+
+    def test_rechazo_no_muestra_proposito_de_reservacion_ajena(self):
+        self.client.force_login(self.usuario)
+        response = self.client.post(self.url, follow=True)
+        self.assertNotContains(response, self.reservacion.proposito)
