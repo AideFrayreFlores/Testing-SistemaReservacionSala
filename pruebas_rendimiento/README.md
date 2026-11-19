@@ -13,8 +13,8 @@ pruebas ofensivas). Cubren:
   30 usuarios virtuales, subida gradual de 30 s y 3 registros por usuario
   (90 muestras medidas) sobre 90 slots únicos del dataset.
 
-El plan de **PERF-03** (concurrencia sobre el mismo slot) no está
-implementado en este README.
+El plan de **PERF-03** (concurrencia sobre el mismo slot) se documenta en
+la sección del commit 4/5, más abajo.
 
 ## Requisitos
 
@@ -596,6 +596,286 @@ observado.
 - El percentil usa rango más cercano sobre las 90 muestras medidas,
   incluidas las fallidas, igual que el reporte de JMeter. La fórmula está
   documentada en `evaluar_jtl.py`.
+
+## Plan 4/5: PERF-03 (concurrencia legítima sobre el mismo horario)
+
+`plan_perf03_concurrencia_mismo_horario.jmx` implementa el escenario del
+enunciado: **10 repeticiones controladas** en las que **dos solicitudes
+normales y autenticadas** piden **el mismo horario**. El sistema debe
+aceptar exactamente una y rechazar la otra por traslape, sin persistir
+duplicados. No es un exploit ni un ataque: son dos clientes legítimos con
+su propia sesión, el mismo usuario sintético y el formulario real, con un
+`Synchronizing Timer` que las hace salir juntas para que la carrera sea
+real.
+
+Archivos nuevos de este commit:
+
+```text
+pruebas_rendimiento/
+├── verificar_perf03.py                     # validación de pares en el JTL
+└── jmeter/
+    ├── plan_perf03_concurrencia_mismo_horario.jmx
+    ├── usuarios_perf03.csv                  # usuario de PERF-03
+    └── rondas_perf03.csv                    # 20 filas = 2 idénticas por ronda
+```
+
+| Parámetro | Default de examen | Override CLI |
+|---|---|---|
+| Hilos | **2, fijo** | no se parametriza |
+| Rondas | 10 | `-Jrondas=1` (humo; el CSV alcanza hasta 10) |
+| Subida gradual | 0 s | `-Jramp=0` |
+| Barrera | 2 hilos, timeout 30 s | fijo en el plan |
+| Puerto | 8000 | `-Jpuerto=8016` |
+| Fecha base | hoy + 60 días | `-Jfecha_base=2027-01-15` |
+
+Los hilos son **2 fijos** porque el `Synchronizing Timer` usa
+`groupSize=2`: con un hilo la barrera esperaría el timeout en cada ronda
+y la pareja se perdería. El loop del Thread Group es `${RONDAS}` y el CSV
+tiene 20 filas (2 por ronda), así que `-Jrondas` no debe pasar de 10.
+
+### Ranuras, fecha y propósito (cómo cruzar JTL y base)
+
+`rondas_perf03.csv` tiene 10 pares de filas **idénticas**; cada hilo
+consume una fila por ronda (`shareMode=all`), de modo que ambos piden la
+misma ranura sin depender del orden de lectura:
+
+| Columna | Valor |
+|---|---|
+| `ronda` | `01` … `10` |
+| `sala_id` | `1` (Sala A de la migración inicial) |
+| `dias_offset` | `0` … `9`, una fecha distinta por ronda |
+| `hora_inicio` / `hora_fin` | `08:00` / `09:00` (60 min) |
+| `asistentes` | `2` |
+
+Formatos exactos para cruzar el JTL, la base y la auditoría de la
+corrida:
+
+- **Fecha enviada y persistida**: ISO `YYYY-MM-DD`, calculada como
+  `fecha_base + dias_offset`. Con los defaults del examen, la corrida
+  ocupa 10 días consecutivos a partir de hoy + 60.
+- **Propósito persistido**:
+  `Reserva PERF-03 ronda RR de NN AAAA-MM-DD 08:00-09:00`, con `RR` =
+  ronda (`01`…`10`), `NN` = valor de `-Jrondas` (`10` por defecto) y la
+  fecha ISO. Los dos POST de una ronda calculan el **mismo** propósito;
+  solo el aceptado queda en la base, así que cada corrida deja
+  exactamente **10 propósitos distintos**, uno por ronda.
+- **Etiqueta del JTL**:
+  `PERF-03 POST ronda RR AAAA-MM-DD 08:00-09:00 (medido)`. Hay 2
+  muestras por etiqueta (la aceptada y la rechazada), con la misma fecha
+  y horario: eso evidencia que ambas pidieron la misma ranura.
+
+La fecha se calcula con un `JSR223PreProcessor` (Groovy, Java 21) antes
+del GET del formulario; el `DateField` de Django acepta ISO. Sin
+`-Jfecha_base`, la base es `LocalDate.now() + 60 días` (zona del JVM; el
+margen evita diferencias con `America/Mexico_City`).
+
+### Sincronización
+
+- El `Synchronizing Timer` es **hijo únicamente del POST medido**: login
+  y GET del formulario quedan fuera de la barrera y no se serializan.
+- `groupSize=2` y `timeoutInMs=30000` van como literales: JMeter parsea
+  los `longProp`/`intProp` al cargar el plan y no resuelve `${...}` ahí
+  (falla con `NumberFormatException`). Si cambias la barrera, hazlo en el
+  `.jmx`.
+- Las dos filas idénticas por ronda son las que garantizan la misma
+  ranura aunque el orden de lectura del CSV varíe. La barrera mantiene
+  las rondas alineadas: cada hilo lee una fila por iteración, así que en
+  la ronda `r` se consumen las filas `2r-1` y `2r`.
+- Si el timeout de la barrera expira (un hilo no llega, login fallido,
+  error inesperado), la ronda queda con una sola solicitud y
+  `verificar_perf03.py` la reporta como pareja incompleta. No hay
+  reintentos que oculten el problema.
+
+### Outcomes: el rechazo esperado no es error
+
+El POST medido lleva una aserción `JSR223` que clasifica la respuesta:
+
+| HTTP | Texto / cabecera | Resultado | `success` | `responseMessage` |
+|---|---|---|---|---|
+| 302 | `Location` con `/reservaciones/` | aceptada | `true` | `ACEPTADA_302` |
+| 200 | contiene `disponible en el horario solicitado` | rechazo por traslape | `true` | `RECHAZO_TRASLAPE_200` |
+| otro | — | **error inesperado** | `false` | `INESPERADA_<código>` |
+
+Así, el rechazo controlado **no** cuenta como error (es el resultado
+correcto de la segunda solicitud) y sí se marcan los fallos reales:
+HTTP 500, timeout de 15 s, 200 sin el mensaje de traslape (por ejemplo un
+formulario inválido), 302 a otra ruta o sesión perdida. Login y
+formulario conservan las aserciones de los planes anteriores (200, CSRF,
+302 a `/reservaciones/`).
+
+La aserción reescribe `responseMessage`, de modo que el JTL distingue el
+outcome sin columnas extra; el `responseCode` conserva el HTTP y la
+etiqueta conserva ronda y fecha. No se usa `Duration Assertion` ni
+`Transaction Controller`.
+
+### Etiquetas y conteo (2 × 10)
+
+| Etiqueta en el JTL | Muestras | ¿Cuenta como medida? |
+|---|---|---|
+| `00 login GET /usuarios/login (no medido)` | 2 | No |
+| `00 login POST /usuarios/login (no medido)` | 2 | No |
+| `00 formulario GET /reservaciones/nueva (no medido)` | 20 | No |
+| `PERF-03 POST ronda RR AAAA-MM-DD 08:00-09:00 (medido)` | 20 | **Sí (10 parejas)** |
+
+Total del plan: 44 muestras, 20 medidas. Cada hilo hace su login una vez
+(`Once Only Controller`) y reutiliza su sesión/cookie durante las 10
+rondas; son 2 sesiones del mismo `alumno1`, no cookies compartidas.
+
+### Comandos
+
+Humo funcional (2 hilos × 1 ronda = 8 muestras, 2 medidas). Sirve para
+comprobar login, CSRF, barrera y aserciones; **no** demuestra las 10
+rondas:
+
+```bash
+cd pruebas_rendimiento/jmeter
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+read -rs JMETER_CLAVE
+export JMETER_CLAVE
+jmeter -n -t plan_perf03_concurrencia_mismo_horario.jmx \
+  -Jrondas=1 -Jpuerto=8016 -Jfecha_base="$(date -d '+59 days' +%F)" \
+  -l /tmp/opencode/perf03-humo.jtl \
+  -j /tmp/opencode/perf03-humo.log
+unset JMETER_CLAVE
+```
+
+Esperado: `summary = 8`, `Err: 0` (2 login + 2 formularios + 2 POST). Si
+`date -d` no está disponible, pasa una fecha ISO explícita.
+
+Corrida de examen (Django local, puerto 8000; ajusta `-Jpuerto` si tu
+instancia usa otro):
+
+```bash
+cd pruebas_rendimiento/jmeter
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+read -rs JMETER_CLAVE
+export JMETER_CLAVE
+jmeter -n -t plan_perf03_concurrencia_mismo_horario.jmx \
+  -l /tmp/opencode/perf03.jtl \
+  -j /tmp/opencode/perf03.log
+unset JMETER_CLAVE
+```
+
+Esperado: `summary = 44`, `Err: 0`; duración de pocos segundos (sin
+rampa). `-l` debe apuntar a un archivo que **no exista**: JMeter añade
+líneas a un JTL previo. Si repites la corrida, usa otra `-Jfecha_base`
+(por ejemplo, hoy + 70) o una base limpia; no borres filas.
+
+### Evaluación de las parejas (script propio)
+
+`evaluar_jtl.py` no aplica a PERF-03 (no hay umbral de latencia ni de
+volumen, y su filtro por etiqueta no valida parejas); **no se modificó**.
+La validación usa `verificar_perf03.py`, que comprueba, por ronda:
+2 muestras de hilos distintos, misma fecha y horario, 1 aceptación (302)
+y 1 rechazo (200) con sus marcadores, ambas `success=true`; además exige
+10 rondas con fechas distintas y consecutivas y ningún fallo en login o
+formulario.
+
+```bash
+cd pruebas_rendimiento
+python3 verificar_perf03.py --jtl /tmp/opencode/perf03.jtl
+```
+
+Salida esperada (valores ilustrativos):
+
+```text
+JTL evaluado: /tmp/opencode/perf03.jtl
+Rondas encontradas: 10 (esperadas: 10)
+  ronda 01 2027-01-18 08:00-09:00: 2 POST, 1 aceptada(s), 1 rechazo(s)
+  ...
+  ronda 10 2027-01-27 08:00-09:00: 2 POST, 1 aceptada(s), 1 rechazo(s)
+Errores inesperados fuera del POST: 0
+Comprobaciones:
+  [CUMPLE] una aceptacion (302) y un rechazo (200) por ronda, ambos success=true
+  [CUMPLE] 10 rondas con ranuras distintas y fechas consecutivas
+  [CUMPLE] sin errores inesperados en el resto del plan
+Resultado PERF-03 en JTL: CUMPLE
+```
+
+- Código de salida `0` = cumple; `1` = alguna comprobación falla (por
+  ejemplo dos 302 en una ronda); `2` = JTL ilegible o sin muestras
+  PERF-03.
+- Para el humo usa `--rondas 1`.
+- `Err: 0` de JMeter **no basta**: dos aceptaciones también dan `Err: 0`
+  porque ambos 302 son respuestas HTTP válidas. La detección de
+  duplicados es la comparación 1×302/1×200 por ronda de este script; se
+  comprobó con un stub que acepta siempre las dos solicitudes: JMeter
+  reportó 0 errores y el script falló las dos rondas.
+
+### Cruzar con la base de datos (solo lectura)
+
+El JTL demuestra el resultado HTTP; que **no** queden duplicados se
+confirma en MariaDB con dos consultas de solo lectura: una por corrida y
+otra global. Desde la raíz del repositorio, usa la misma `FECHA_BASE` de
+JMeter o asígnala antes de ejecutar:
+
+```bash
+{
+  printf "SET @fecha_base = '%s';\n" "${FECHA_BASE:?Falta la fecha base}"
+  cat pruebas_rendimiento/jmeter/auditar_{perf03,traslapes}.sql
+} | docker compose exec -T db sh -c \
+    'MYSQL_PWD="$MYSQL_PASSWORD" mariadb -u "$MYSQL_USER" "$MYSQL_DATABASE"'
+```
+
+Si Docker requiere `sudo`, úsalo antes de `docker compose`. Se esperan
+**10 rondas con una fila vigente cada una y 0 pares vigentes traslapados**.
+La consulta por corrida limita por fecha, sala, horario, estado y propósito,
+de modo que no cuenta reservaciones de corridas con fechas distintas.
+
+### Verificación realizada (stub local, no Django)
+
+La mecánica del plan se validó con **JMeter 5.6.3 + Java 21** contra un
+servidor HTTP mínimo local en `127.0.0.1:8023` (no versionado, **no**
+Django) que emula login con CSRF, formulario autenticado y POST con
+aceptación de la primera solicitud y rechazo por traslape de la segunda:
+
+- `xmllint --noout` sobre el `.jmx` y recorrido con `ElementTree`: un solo
+  Thread Group de 2 hilos, loop `${RONDAS}`, un único `Synchronizing
+  Timer` hijo del POST medido (`groupSize=2`, `timeoutInMs=30000`), sin
+  `Duration Assertion` ni `Transaction Controller`, y todos los samplers
+  contra `${HOST}` (`127.0.0.1`).
+- `rondas_perf03.csv`: 20 filas, 10 pares idénticos, 10 rondas y
+  `dias_offset` consecutivos de 0 a 9.
+- Corrida completa: `summary = 44`, `Err: 0`; 10 rondas con 1×302 y 1×200
+  cada una, ambas `success=true`, y `verificar_perf03.py` en `0`. Los dos
+  POST de cada ronda arrancaron en el mismo milisegundo (diferencia 0 ms)
+  y la traza del stub registró exactamente 10 aceptaciones y 10 rechazos,
+  una por ranura.
+- Humo `-Jrondas=1`: `summary = 8`, `Err: 0`, verificador con
+  `--rondas 1` en `0`.
+- Detección de fallos: con un stub que **acepta siempre** las dos
+  solicitudes, JMeter reportó `Err: 0` pero el verificador falló las dos
+  rondas (`2 aceptaciones`). También se probaron JTL sintéticos con pareja
+  incompleta, login fallido y marcador de rechazo ausente: exit `1` en
+  todos; JTL inexistente: exit `2`.
+- `flake8` sin hallazgos y `radon` con complejidad máxima 9 (≤ 10) en
+  `verificar_perf03.py`.
+
+Esto valida XML, CSV, sincronización, etiquetas, aserciones, outcomes y
+el verificador. **No** valida el control de concurrencia real: la corrida
+contra Django sobre MariaDB (puerto 8000) queda para la instancia del
+equipo y es la que confirma que no se persisten duplicados.
+
+### Límites de este plan
+
+- La barrera garantiza salida simultánea, **no** el orden de llegada al
+  servidor ni el resultado de la base. El control real es
+  `transaction.atomic()` + `select_for_update()` en
+  `registrar_reservacion`; si esa protección fallara, la ronda mostraría
+  dos 302 y el script fallaría. Esa validación pertenece a la corrida en
+  MariaDB.
+- Dos hilos son suficientes para el criterio; con más hilos o más rondas
+  cambia el CSV y deja de ser el escenario del enunciado.
+- Con `-Jrondas=1` solo hay una pareja: no se puede concluir nada sobre
+  las 10 repeticiones.
+- Las 10 filas aceptadas **no se borran**; la base es desechable y cada
+  repetición usa una `fecha_base` nueva. Si una corrida se corta, las
+  filas ya aceptadas siguen ocupando su ranura.
+- La auditoría SQL global cuenta parejas traslapadas vigentes en toda la
+  base; úsala junto con el conteo por propósito para no atribuir a
+  PERF-03 traslapes de otros datos.
 
 ## Riesgos y límites
 
