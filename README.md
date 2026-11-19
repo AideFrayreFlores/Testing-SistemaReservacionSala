@@ -2,6 +2,10 @@
 
 Aplicación web desarrollada en **Python / Django** y **MariaDB** para la gestión de reservaciones de salas de estudio académicas, aplicando **Desarrollo Guiado por Pruebas (TDD)** y **Desarrollo Guiado por Comportamiento (BDD)** con **Behave y Selenium**.
 
+Integrantes del equipo:
+María Aide Frayre Flores
+Fabián González Castañeda
+
 ---
 
 ## 1. Requisitos previos

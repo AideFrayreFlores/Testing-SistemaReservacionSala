@@ -1,5 +1,7 @@
 # Pruebas de rendimiento (JMeter)
 
+Resultados medidos y evidencia: [RESULTADOS.md](RESULTADOS.md).
+
 Planes de **Apache JMeter 5.6.3** para el Sistema de Reservación de Salas,
 ejecutados **solo contra el Django local** (sin destinos remotos y sin
 pruebas ofensivas). Cubren:
