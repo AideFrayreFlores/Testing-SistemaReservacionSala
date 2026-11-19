@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-"""Evalua un JTL CSV de JMeter contra los criterios de PERF-01.
+"""Evalua un JTL CSV de JMeter contra criterios de rendimiento.
 
-Uso tipico (medicion completa, 50 usuarios x 5 consultas = 250 muestras):
+Uso tipico para PERF-01 (50 usuarios x 5 consultas = 250 muestras):
 
     python3 evaluar_jtl.py --jtl /tmp/opencode/perf01.jtl
 
-Humo con SQLite (1 usuario x 5 consultas), donde el volumen de examen
+Para PERF-02 (30 usuarios x 3 registros = 90 muestras) se reutiliza el
+mismo evaluador cambiando etiqueta, volumen y percentil:
+
+    python3 evaluar_jtl.py --jtl /tmp/opencode/perf02.jtl \
+        --etiqueta '^PERF-02' --min-muestras 90 --p95 2000 \
+        --escenario PERF-02
+
+Humo con SQLite (1 usuario x 1 registro), donde el volumen de examen
 no aplica y se relaja solo el minimo de muestras:
 
-    python3 evaluar_jtl.py --jtl /tmp/opencode/perf01-humo.jtl \
-        --min-muestras 5
+    python3 evaluar_jtl.py --jtl /tmp/opencode/perf02-humo.jtl \
+        --etiqueta '^PERF-02' --min-muestras 1 --p95 2000
 
 Criterios (por defecto, los del enunciado para PERF-01):
 
@@ -154,8 +161,8 @@ def criterios_de(metricas, min_muestras, max_errores, p95_limite):
 def construir_parser():
     parser = argparse.ArgumentParser(
         description=(
-            "Evalua el JTL de JMeter contra los criterios de PERF-01 "
-            "(consulta de reservaciones)."
+            "Evalua el JTL de JMeter contra los criterios de rendimiento "
+            "del escenario indicado (por defecto PERF-01)."
         )
     )
     parser.add_argument(
@@ -174,8 +181,8 @@ def construir_parser():
         type=int,
         default=MIN_MUESTRAS_POR_DEFECTO,
         help=(
-            "minimo de muestras medidas; usa 5 para el humo 1x5 "
-            f"(por defecto {MIN_MUESTRAS_POR_DEFECTO})"
+            "minimo de muestras medidas; usa 5 (humo PERF-01) o 1 "
+            f"(humo PERF-02); por defecto {MIN_MUESTRAS_POR_DEFECTO}"
         ),
     )
     parser.add_argument(
@@ -201,6 +208,14 @@ def construir_parser():
         help=(
             "escribe un JTL solo con las muestras medidas, para generar "
             "el reporte HTML sin el login"
+        ),
+    )
+    parser.add_argument(
+        "--escenario",
+        default="PERF-01",
+        help=(
+            "nombre del escenario que aparece en el resumen final "
+            "(por defecto PERF-01)"
         ),
     )
     return parser
@@ -251,9 +266,9 @@ def main(argv=None):
         estado = "CUMPLE" if cumple else "NO CUMPLE"
         print(f"  [{estado}] {descripcion} (observado: {valor})")
     if all(cumple for _, cumple, _ in criterios):
-        print("Resultado PERF-01: CUMPLE")
+        print(f"Resultado {args.escenario}: CUMPLE")
         return 0
-    print("Resultado PERF-01: NO CUMPLE")
+    print(f"Resultado {args.escenario}: NO CUMPLE")
     return 1
 
 

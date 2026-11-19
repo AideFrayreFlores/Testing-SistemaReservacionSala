@@ -9,8 +9,11 @@ pruebas ofensivas). Cubren:
 - **Commit 2/5 — PERF-01:** consulta del listado de reservaciones después
   de autenticar, con 50 usuarios virtuales, subida gradual de 30 s y 5
   consultas por usuario (250 muestras medidas).
+- **Commit 3/5 — PERF-02:** registro de reservaciones sin conflicto, con
+  30 usuarios virtuales, subida gradual de 30 s y 3 registros por usuario
+  (90 muestras medidas) sobre 90 slots únicos del dataset.
 
-El resto de PERF (registro sin conflicto y concurrencia) no está
+El plan de **PERF-03** (concurrencia sobre el mismo slot) no está
 implementado en este README.
 
 ## Requisitos
@@ -27,10 +30,14 @@ implementado en este README.
 - Servidor Django **local** ya levantado, sobre una base **aislada y
   migrada**, de modo que existan los usuarios iniciales de
   `usuarios/migrations/0001_usuarios_iniciales.py` (`alumno1`).
-- La medición de PERF-01 debe hacerse sobre la instancia con MariaDB
-  (Docker Compose del proyecto). SQLite sirve **solo** para el humo
-  funcional del plan: con 50 hilos concurrentes SQLite responde
-  `database is locked` y el resultado no representa a la aplicación.
+- La medición de PERF-01 (50 hilos) y PERF-02 (30 hilos) debe hacerse
+  sobre la instancia con MariaDB (Docker Compose del proyecto). SQLite
+  sirve **solo** para el humo funcional de los planes: con decenas de
+  hilos concurrentes responde `database is locked` y el resultado no
+  representa a la aplicación.
+- Para PERF-02, la base debe tener las salas 1, 2 y 3 activas (IDs de la
+  migración inicial) y los 90 slots de la fecha base libres; revisa el
+  plan 3/5 antes de medir.
 
 ## Archivos
 
@@ -41,8 +48,11 @@ pruebas_rendimiento/
 └── jmeter/
     ├── plan_humo_login.jmx                   # commit 1/5 (1 hilo, 1 vuelta)
     ├── plan_perf01_consulta_reservaciones.jmx # commit 2/5 (PERF-01)
+    ├── plan_perf02_registro_reservaciones.jmx # commit 3/5 (PERF-02)
     ├── usuarios_smoke.csv                    # usuario del humo
-    └── usuarios_perf01.csv                   # usuario de PERF-01
+    ├── usuarios_perf01.csv                   # usuario de PERF-01
+    ├── usuarios_perf02.csv                   # usuario de PERF-02
+    └── reservas_perf02.csv                   # 90 slots únicos de PERF-02
 ```
 
 `*.jtl`, `jmeter.log` y `reporte*/` están en `.gitignore`: los resultados
@@ -50,25 +60,26 @@ se generan y se guardan fuera de Git (por ejemplo en `/tmp/opencode/`).
 
 ## Usuarios sintéticos
 
-Ambos CSV contienen **solo un nombre de usuario ya existente** creado por
-la migración inicial; no se crean cuentas nuevas (ni 50 ni ninguna):
+Los tres CSV de usuarios contienen **solo un nombre de usuario ya
+existente** creado por la migración inicial; no se crean cuentas nuevas
+(ni 50 ni ninguna):
 
 ```csv
 usuario
 alumno1
 ```
 
-En PERF-01 los 50 hilos usan ese mismo usuario, pero cada hilo tiene su
-**propia sesión**: el `HTTP Cookie Manager` está configurado con
-`controlledByThreadGroup=true`, así que cada hilo mantiene su propio
-`sessionid`/`csrftoken` y hace su propio login (una vez) con el formulario
-real. Esto es autenticación legítima y no depende de compartir cookies
-entre hilos.
+En PERF-01 los 50 hilos y en PERF-02 los 30 hilos usan ese mismo usuario,
+pero cada hilo tiene su **propia sesión**: el `HTTP Cookie Manager` está
+configurado con `controlledByThreadGroup=true`, así que cada hilo mantiene
+su propio `sessionid`/`csrftoken` y hace su propio login (una vez) con el
+formulario real. Esto es autenticación legítima y no depende de compartir
+cookies entre hilos.
 
-El CSV tiene una sola fila y el plan lo recicla (`recycle=true`,
-`shareMode=all`), por lo que todos los hilos leen `alumno1`. Para usar otro
-usuario local, edita `usuarios_perf01.csv` y exporta su clave en
-`JMETER_CLAVE`; el `.jmx` no se toca.
+Cada CSV de usuarios tiene una sola fila y el plan la recicla
+(`recycle=true`, `shareMode=all`), por lo que todos los hilos leen
+`alumno1`. Para usar otro usuario local, edita el CSV del plan y exporta su
+clave en `JMETER_CLAVE`; el `.jmx` no se toca.
 
 La contraseña **no** está en el repositorio: se lee de la variable de
 entorno `JMETER_CLAVE` en tiempo de ejecución.
@@ -331,54 +342,348 @@ en ese caso cita el p95 por etiqueta, no el total del plan.
   servidor: repórtalo como hallazgo, no subas hilos para "mejorar" el
   número.
 
+## Plan 3/5: PERF-02 (registro de reservaciones sin conflicto)
+
+`plan_perf02_registro_reservaciones.jmx` implementa el escenario del
+enunciado: 30 usuarios virtuales, subida gradual de 30 s y 3 registros por
+usuario, con 90 muestras medidas.
+
+| Parámetro | Default de examen | Override CLI |
+|---|---|---|
+| Hilos (usuarios virtuales) | 30 | `-Jusuarios=1` |
+| Subida gradual (ramp) | 30 s | `-Jramp=1` |
+| Registros por usuario | 3 | `-Jiteraciones=3` |
+| Puerto | 8000 | `-Jpuerto=8016` |
+| Fecha base | hoy + 30 días | `-Jfecha_base=2027-01-15` |
+
+Con los defaults se esperan **90 muestras medidas** (30 × 3). La rampa
+reparte el arranque de los 30 hilos; cada hilo hace su login una vez y
+luego 3 registros.
+
+### Dataset: 90 slots únicos
+
+`reservas_perf02.csv` tiene 90 filas y se consume una por registro
+(`shareMode=all`, `recycle=false`). Las columnas son:
+
+| Columna | Uso |
+|---|---|
+| `sala_id` | PK de una sala activa (por defecto 1, 2 y 3). |
+| `dias_offset` | Días que se suman a la fecha base (0, 1 y 2). |
+| `hora_inicio` / `hora_fin` | Bloques de 1 h entre 08:00 y 18:00. |
+| `asistentes` | 2 (cabe en la sala de menor capacidad, 4). |
+| `proposito` | Texto único de 30 caracteres (`Reserva PERF-02 slot NNN de 90`). |
+
+La combinación `(sala_id, dias_offset, hora_inicio)` es única en las 90
+filas: 3 salas × 3 fechas × 10 horarios. Como cada fila se usa una sola
+vez, **no puede haber traslape** aunque dos hilos registren al mismo
+tiempo; no se depende del orden de ejecución. El Thread Group usa
+`${ITERACIONES}` (3) como loop, de modo que cada iteración consume
+exactamente una fila del CSV; no se usa un bucle anidado.
+
+Las horas respetan las reglas del formulario: inicio entre 08:00 y 19:00,
+fin <= 20:00 y duración de 60 minutos (mínimo 30, máximo 120).
+
+### Fecha base y repetición no destructiva
+
+El CSV **no** guarda fechas absolutas: guarda `dias_offset`. Un
+`JSR223PreProcessor` (Groovy, Java 21) calcula
+`fecha = fecha_base + dias_offset` antes del GET del formulario:
+
+- `-Jfecha_base=YYYY-MM-DD` fija la primera fecha.
+- Sin la propiedad, la base es `LocalDate.now() + 30 días` (zona del JVM;
+  el margen de 30 días evita cualquier diferencia con
+  `America/Mexico_City`).
+- El valor se envía en ISO `YYYY-MM-DD`, formato que el `DateField` de
+  Django acepta; el formulario no requiere `dd/mm/yyyy`.
+
+Para repetir la prueba **no borres filas**: pasa una `fecha_base` nueva
+(por ejemplo, hoy + 60) y el dataset vuelve a caer en fechas libres. Si
+repites con la misma base sobre una base de datos que ya tiene esos 90
+slots, el POST devuelve 200 con "La sala no está disponible en el horario
+solicitado" y la aserción de 302 falla: la prueba lo reporta, no lo oculta.
+La base usada es desechable; puedes recrear la instancia aislada si lo
+prefieres. Si una corrida se aborta a medias, también conviene una base
+nueva: las filas ya consumidas quedaron reservadas en la base de datos.
+
+Los `sala_id` por defecto son los de
+`salas/migrations/0002_salas_iniciales.py` (Sala A=1, Sala B=2, Sala C=3).
+Comprueba los IDs de tu instancia antes de medir:
+
+```bash
+docker compose exec app python manage.py shell -c "
+from salas.models import Sala
+print(list(Sala.objects.filter(activa=True).values_list('id', 'nombre', 'capacidad')))
+"
+```
+
+Si tu base tiene otros IDs, edita la columna `sala_id` del CSV manteniendo
+3 salas activas distintas y capacidad >= 2. Un ID inexistente o inactivo
+hace que el POST no redirija y la muestra medida cuente como error.
+
+### Estructura del plan
+
+1. `HTTP Request Defaults`: `http://${HOST}:${PORT}` con `HOST=127.0.0.1`;
+   timeouts de conexión 5 s y de respuesta 15 s.
+2. Dos `CSV Data Set Config`: un usuario preexistente (una fila reciclada)
+   y los 90 slots (sin reciclar).
+3. `HTTP Cookie Manager`: sesión independiente por hilo.
+4. `Once Only Controller` — login real una vez por hilo, **fuera de los
+   KPI**: `GET /usuarios/login` (extrae CSRF) y `POST /usuarios/login`
+   (exige 302 y `Location` con `/reservaciones/`).
+5. En cada iteración del Thread Group:
+   - `00 formulario GET /reservaciones/nueva (no medido)`: exige 200, el
+     bloque `id="reservacion-form"` y el CSRF; extrae
+     `csrfmiddlewaretoken` a `CSRF_FORM` y calcula `${fecha}`.
+   - `PERF-02 POST /reservaciones/nueva (registro medido)`: envía
+     `csrfmiddlewaretoken`, `sala`, `fecha`, `hora_inicio`, `hora_fin`,
+     `asistentes` y `proposito`; exige **302** y `Location` con
+     `/reservaciones/`.
+   - `00 verificacion GET /reservaciones/ (no medido)`: comprueba en una
+     petición separada el mensaje de éxito y la tabla con una fila del
+     dataset.
+
+### Etiquetas y conteo (30 × 3)
+
+| Etiqueta en el JTL | Muestras | ¿Cuenta en los KPI? |
+|---|---|---|
+| `00 login GET /usuarios/login (no medido)` | 30 | No |
+| `00 login POST /usuarios/login (no medido)` | 30 | No |
+| `00 formulario GET /reservaciones/nueva (no medido)` | 90 | No |
+| `PERF-02 POST /reservaciones/nueva (registro medido)` | 90 | **Sí** |
+| `00 verificacion GET /reservaciones/ (no medido)` | 90 | No |
+
+El total del plan es 330 muestras; el evaluador filtra `^PERF-02` y solo
+cuenta las 90. El POST usa `follow_redirects=false`, así que el 302
+produce **una** muestra y no se duplica con el GET de verificación. No se
+usa `Transaction Controller`.
+
+### Verificación del éxito sin doble conteo
+
+El POST se considera exitoso solo si devuelve 302 con `Location` hacia
+`/reservaciones/`: la vista redirige únicamente después de que
+`registrar_reservacion` persistió la fila. El GET de verificación es una
+petición aparte, con la cookie del mismo hilo, y exige
+`id="mensaje-confirmacion"`, el texto `registrada exitosamente`, la tabla
+`id="tabla-reservaciones"` y una fila `Reserva PERF-02 slot`. El mensaje
+flash se guarda en la sesión del hilo y solo se crea en la rama de éxito;
+como cada hilo tiene su propia sesión, no puede provenir del POST de otro
+hilo. Login, formulario y verificación llevan etiqueta `00 …`, por lo que
+no contaminan muestras, errores ni percentiles.
+
+### Comandos
+
+Humo funcional en SQLite (puerto 8016, 1 hilo × 1 registro = 1 muestra
+medida). **No** es la medición de examen: SQLite no soporta 30 escritores
+concurrentes.
+
+```bash
+cd pruebas_rendimiento/jmeter
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+read -rs JMETER_CLAVE
+export JMETER_CLAVE
+jmeter -n -t plan_perf02_registro_reservaciones.jmx \
+  -Jusuarios=1 -Jramp=1 -Jiteraciones=1 -Jpuerto=8016 \
+  -Jfecha_base="$(date -d '+29 days' +%F)" \
+  -l /tmp/opencode/perf02-humo.jtl \
+  -j /tmp/opencode/perf02-humo.log
+unset JMETER_CLAVE
+```
+
+Esperado: `summary = 5` (2 login + 1 formulario + 1 POST + 1
+verificación) y `Err: 0`. La fecha `+29` evita el primer slot del default
+`+30` si después mides sobre la misma base; en una base desechable
+cualquier fecha libre sirve. Si `date -d` no está disponible, pasa una
+fecha ISO explícita.
+
+Medición de PERF-02 con los defaults (Django local sobre MariaDB, puerto
+8000; ajusta `-Jpuerto` si tu instancia usa otro):
+
+```bash
+cd pruebas_rendimiento/jmeter
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+read -rs JMETER_CLAVE
+export JMETER_CLAVE
+jmeter -n -t plan_perf02_registro_reservaciones.jmx \
+  -l /tmp/opencode/perf02.jtl \
+  -j /tmp/opencode/perf02.log
+unset JMETER_CLAVE
+```
+
+Esperado: `summary = 330`, `Err: 0`; duración aproximada 35–60 s (30 s de
+rampa + 90 registros). `-l` debe apuntar a un archivo que **no exista**:
+JMeter añade líneas a un JTL previo. Para una repetición, agrega
+`-Jfecha_base=YYYY-MM-DD` con una base nueva (o recrea la instancia
+aislada).
+
+### Evaluación
+
+El mismo `evaluar_jtl.py` sirve para PERF-02 cambiando etiqueta, volumen
+y percentil. `--escenario` solo cambia el nombre del resumen final; su
+default sigue siendo `PERF-01`, así que los comandos anteriores no cambian.
+
+```bash
+cd pruebas_rendimiento   # desde la raíz del repositorio
+python3 evaluar_jtl.py --jtl /tmp/opencode/perf02.jtl \
+  --etiqueta '^PERF-02' --min-muestras 90 --p95 2000 \
+  --escenario PERF-02
+```
+
+Salida esperada (valores ilustrativos):
+
+```text
+JTL evaluado: /tmp/opencode/perf02.jtl
+Etiqueta:     ^PERF-02
+Muestras:     90
+Errores:      0 (0.00 %)
+Tiempos (ms): p50=120 p90=340 p95=510 max=980
+Criterios:
+  [CUMPLE] muestras medidas >= 90 (observado: 90)
+  [CUMPLE] tasa de errores < 1 % (observado: 0.00 %)
+  [CUMPLE] percentil 95 <= 2000 ms (observado: 510 ms)
+Resultado PERF-02: CUMPLE
+```
+
+Con 90 muestras, **un solo error** da 1.11 % y el criterio `< 1 %` falla:
+la corrida debe quedar en cero errores. El mínimo de 90 evita aceptar una
+corrida incompleta. Para el humo, el mismo evaluador con volumen relajado
+(el humo no demuestra el criterio de volumen):
+
+```bash
+python3 evaluar_jtl.py --jtl /tmp/opencode/perf02-humo.jtl \
+  --etiqueta '^PERF-02' --min-muestras 1 --p95 2000 \
+  --escenario PERF-02
+```
+
+### Reporte HTML
+
+```bash
+cd pruebas_rendimiento
+python3 evaluar_jtl.py --jtl /tmp/opencode/perf02.jtl \
+  --etiqueta '^PERF-02' --min-muestras 90 --p95 2000 \
+  --jtl-filtrado /tmp/opencode/perf02-filtrado.jtl
+cd jmeter
+jmeter -g /tmp/opencode/perf02-filtrado.jtl \
+  -o /tmp/opencode/perf02-reporte
+```
+
+La tabla de etiquetas del reporte debe mostrar una sola fila
+`PERF-02 POST /reservaciones/nueva (registro medido)` con 90 muestras. El
+reporte HTML (y su `statistics.json`) aporta promedio, p90, p95, throughput
+y porcentaje de errores; el script aporta la aceptación con la fórmula
+documentada. Los valores de ejemplo no son evidencia: adjunta el JTL o el
+reporte de tu corrida y una breve interpretación del cuello de botella
+observado.
+
+### Interpretación esperada y cuello de botella a revisar
+
+- Cada POST escribe una fila y, dentro de `transaction.atomic()`, hace
+  `select_for_update()` sobre la sala. Con 30 hilos repartidos en 3 salas
+  hay serialización por sala: si el p95 crece, revisa esperas de lock y la
+  concurrencia del servidor (Apache + mod_wsgi) antes de culpar al plan.
+- `DEBUG=True` y el servidor de aplicación se miden tal como está
+  desplegada la instancia; decláralo en el reporte.
+- La verificación posterior a cada POST renderiza el listado, que crece
+  hasta 90 filas y tiene N+1 consultas por `r.sala.nombre` (ver PERF-01).
+  Esa carga **no** se mide, pero compite con los POST; si necesitas aislar
+  el costo del registro, documenta ese efecto. No la elimines sin perder
+  la verificación funcional del éxito.
+- No hay `Duration Assertion`: la tasa de errores refleja fallos
+  funcionales y el criterio de latencia se evalúa con el script. Un
+  timeout de 15 s sí cuenta como error y sigue siendo visible porque
+  15 s > 2000 ms.
+- El percentil usa rango más cercano sobre las 90 muestras medidas,
+  incluidas las fallidas, igual que el reporte de JMeter. La fórmula está
+  documentada en `evaluar_jtl.py`.
+
 ## Riesgos y límites
 
 - Las aserciones dependen de textos del template (`Mis reservaciones`,
-  `id="btn-logout"`). Un rediseño de la vista obliga a actualizar ambos
-  planes.
+  `id="btn-logout"`, `id="reservacion-form"`, `id="mensaje-confirmacion"`,
+  `Reserva PERF-02 slot`). Un rediseño de las vistas obliga a actualizar
+  los planes.
 - Requiere servidor y base **aislados** ya migrados; si `alumno1` no
   existe o la clave no coincide, el login no redirige y las consultas
   medidas fallan de forma explícita (no hay falso positivo).
-- El login de cada hilo crea 50 sesiones del mismo usuario en
-  `django_session`. Es el comportamiento legítimo de 50 clientes
-  concurrentes; no se reutilizan cookies entre hilos.
-- No se valida concurrencia de reservaciones ni reglas de negocio: eso
-  pertenece a PERF-02/PERF-03.
-- HTTP plano en localhost. Con cookies `Secure` o HTTPS, el Cookie Manager
+- El login de cada hilo crea 50 sesiones en PERF-01 y 30 en PERF-02 del
+  mismo usuario en `django_session`. Es el comportamiento legítimo de
+  clientes concurrentes; no se reutilizan cookies entre hilos.
+- PERF-02 no prueba el control de concurrencia sobre el mismo slot: su
+  dataset usa 90 slots distintos. La concurrencia real (dos POST al mismo
+  horario) pertenece a PERF-03.
+- PERF-02 supone que las salas 1, 2 y 3 existen, están activas y tienen
+  capacidad >= 2. Si tu base tiene otros IDs, actualiza el CSV; un ID
+  inválido produce errores medidos, no un falso positivo.
+- PERF-02 supone que los 90 slots de la fecha base están libres. Repite
+  con una `fecha_base` nueva (o una base limpia); si una corrida se corta,
+  las filas ya consumidas quedaron reservadas.
+- HTTP plano en loopback. Con cookies `Secure` o HTTPS, el Cookie Manager
   no reenviaría `csrftoken`/`sessionid`.
-- SQLite no soporta 50 escritores concurrentes (login/sesiones): úsalo
-  solo con `-Jusuarios=1`.
-- Los defaults 50/30/5 se resuelven en tiempo de ejecución desde variables
-  del plan que leen `-J`; el mismo patrón anidado está confirmado para
-  `${PORT}` por el JTL del humo previo (`localhost:8016`), pero este plan
-  no se ejecutó en el entorno de autoría. Comprueba en la primera corrida
-  que la consola diga `summary = 7` (humo) o `350` (medición).
+- SQLite no soporta 50 escritores concurrentes de PERF-01 ni 30 de
+  PERF-02: úsalo solo con `-Jusuarios=1`.
+- Los defaults 50/30/5 (PERF-01) y 30/30/3 (PERF-02) se resuelven en
+  tiempo de ejecución desde variables del plan que leen `-J`; el patrón
+  anidado está confirmado para `${PORT}` por el JTL del humo previo
+  (`localhost:8016`). Comprueba en la primera corrida que la consola diga
+  `summary = 7`/`350` (PERF-01) o `5`/`330` (PERF-02).
+- La verificación de PERF-02 agrega un GET no medido por registro que
+  renderiza el listado; es carga real sobre el servidor aunque no cuente
+  en los KPI. Decláralo al interpretar el p95.
 - Los números del README son ilustrativos. Los resultados reales deben
   generarse en la instancia del equipo y adjuntarse como evidencia.
 
 ## Verificación realizada
 
-Validación **estática**, sin ejecutar JMeter contra un servidor:
+Validación **estática y mecánica**. La corrida funcional contra Django
+queda para la instancia local del equipo.
 
 ```bash
 xmllint --noout \
-  pruebas_rendimiento/jmeter/plan_perf01_consulta_reservaciones.jmx
+  pruebas_rendimiento/jmeter/plan_perf01_consulta_reservaciones.jmx \
+  pruebas_rendimiento/jmeter/plan_perf02_registro_reservaciones.jmx
 python3 -m py_compile pruebas_rendimiento/evaluar_jtl.py
 flake8 pruebas_rendimiento/evaluar_jtl.py
 radon cc pruebas_rendimiento/evaluar_jtl.py -s
 ```
 
-- El `.jmx` pasa `xmllint` y se revisó su árbol con un recorrido de XML:
-  `Once Only` contiene solo los dos login, el `Loop Controller` contiene
-  solo la consulta medida y el `Thread Group` toma
-  `${USUARIOS}`/`${RAMP}`/`${ITERACIONES}`, con defaults 50/30/5.
+- Ambos `.jmx` pasan `xmllint`. El árbol de PERF-02 se recorrió con
+  `ElementTree`: el `Once Only` contiene solo los dos login; el Thread
+  Group toma `${USUARIOS}`/`${RAMP}`/`${ITERACIONES}` con defaults 30/30/3;
+  el CSV de 90 filas está fuera del `Once Only`; el POST medido está en el
+  cuerpo de la iteración y no hay `Duration Assertion` ni
+  `Transaction Controller`.
+- `reservas_perf02.csv` se verificó con Python: 90 filas, 90 combinaciones
+  `(sala_id, dias_offset, hora_inicio)` únicas, 90 propósitos únicos, 30
+  filas por sala y por día, horas dentro de 08:00–20:00 y asistentes (2)
+  dentro de la capacidad mínima (4).
 - `flake8` sin hallazgos y `radon` con complejidad máxima 9 (≤ 10).
-- El evaluador se probó con JTL sintéticos (no versionados): 250 muestras
-  que cumplen, 250 con 1.2 % de errores, 250 con p95 de 2237 ms y 5
-  muestras. Devolvió `0` solo en el caso que cumple, `1` en los tres que
-  deben fallar y `2` con un JTL inexistente o sin la etiqueta. También se
-  leyó el JTL de la corrida de humo previa, que no se versiona.
+- El evaluador se probó con JTL sintéticos (no versionados): 90 muestras
+  que cumplen, 90 con 1 error (1.11 %, debe fallar), 90 con p95 de
+  2500 ms (debe fallar), 1 muestra de humo y 250 muestras de PERF-01 con
+  los defaults. Devolvió `0` solo en los casos que cumplen, `1` en los que
+  deben fallar y conserva el texto `Resultado PERF-01` cuando no se pasa
+  `--escenario`.
+- **Mecánica del plan:** con JMeter 5.6.3 + Java 21 se ejecutó el `.jmx`
+  contra un servidor HTTP mínimo local (no versionado, **no Django**) que
+  devuelve el HTML/302 que esperan las aserciones. Resultados:
+  - 1 hilo × 11 iteraciones: 35 muestras (2 login + 11 formulario + 11
+    POST + 11 verificación), 11 medidas, 0 errores. Los cuerpos POST
+    mostraron `sala=1`, `fecha=2027-01-15` y los horarios 08:00→09:00 …
+    17:00→18:00; la fila 11 cambió a `fecha=2027-01-16`, confirmando la
+    suma de `dias_offset`.
+  - 30 hilos × 3 iteraciones (ramp 30 s): 330 muestras, 90 medidas, 0
+    errores; 30 login, 90 formularios, 90 POST, 90 verificaciones. Los 90
+    cuerpos POST fueron **90 slots distintos** (30 por sala y por fecha),
+    sin filas repetidas ni agotamiento del CSV.
+  - Sin `-Jfecha_base`, la fecha enviada fue la de hoy + 30 días
+    (`2026-12-18` al crear este commit).
+  - En una corrida 1×1 el stub exigió la cookie `sessionid` para el
+    formulario y el listado: la petición pasó, así que el Cookie Manager
+    conserva la sesión creada por el 302 del login.
 
-Los planes **no** se ejecutaron al crear este commit (JMeter no está
-instalado en el entorno de autoría): la corrida de humo y la medición las
-realiza quien tenga JMeter y el servidor local.
+Lo anterior valida XML, CSV, variables, CSRF extraído, fecha calculada,
+etiquetas y conteo. **No** valida contra Django: el humo real en SQLite
+(8016) confirma el formulario y las reglas de negocio; la medición en
+MariaDB confirma los umbrales. El humo debe hacerse con 1 hilo; SQLite no
+soporta los 30 escritores concurrentes.
