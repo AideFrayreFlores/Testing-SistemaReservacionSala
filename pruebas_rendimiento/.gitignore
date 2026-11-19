@@ -1,0 +1,4 @@
+# Resultados de ejecución de JMeter: no versionar.
+*.jtl
+jmeter.log
+reporte*/
